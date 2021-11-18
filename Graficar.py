@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 
-def plot_multiple_barras_vertical_from_dataframe(df,columnas,labels_x, label_y, label_legend, title,  width, formato=0, padding = 0, fontsize = 8.5, pie_figura = ""):
+def plot_multiple_barras_vertical_from_dataframe(df,columnas,labels_x, label_y, label_legend, title,  width, formato=0, padding = 0, fontsize = 8.5, pie_figura = "",fig_text_space = -0.2):
 
     valores_a_plotear = []
     for columna in columnas:
@@ -55,7 +55,7 @@ def plot_multiple_barras_vertical_from_dataframe(df,columnas,labels_x, label_y, 
     fig.tight_layout()
     
     if (pie_figura != ""):
-        plt.figtext(0.5, -0.2, pie_figura, wrap=True, horizontalalignment='center', fontsize=12)
+        plt.figtext(0.5, fig_text_space, pie_figura, wrap=True, horizontalalignment='center', fontsize=12)
         
     plt.show()
 
