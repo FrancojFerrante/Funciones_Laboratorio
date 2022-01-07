@@ -9,7 +9,7 @@ from scipy.stats import chi2_contingency
 import numpy as np
 import pandas as pd
 
-def chi_cuadrado_transcripciones(df_list, columnas, categoria, posibilidades):
+def chi_cuadrado_transcripciones(df_list, categoria, posibilidades):
     
     if (len(df_list)<=0):
         print("No es posible realizar el análisis. No se han pasado dataframes como argumentos")
@@ -18,7 +18,7 @@ def chi_cuadrado_transcripciones(df_list, columnas, categoria, posibilidades):
     df_transcripciones = []
     if ('has_Transcription' in df_list[0].columns):
         for df in df_list:
-            df_transcripciones.append(df[df['has_Transcription']==1][columnas])
+            df_transcripciones.append(df[df['has_Transcription']==1])
         
     
     cantidad_transcripciones_categoria0 = []
