@@ -59,26 +59,26 @@ dfFluidez = pd.read_excel(dfFluidez, 'Hoja 1')
 # %% elimino NaN
 
 columnasNan = [
-"fluency_f_0_15_todo",
-"fluency_f_15_30_todo",
-"fluency_f_30_45_todo",
-"fluency_f_45_60_todo",
+"fluency_s_0_15_todo",
+"fluency_s_15_30_todo",
+"fluency_s_30_45_todo",
+"fluency_s_45_60_todo",
 "fluency_a_0_15_todo",
 "fluency_a_15_30_todo",
 "fluency_a_30_45_todo",
 "fluency_a_45_60_todo",
-"fluency_f_0_15_errores_francos",
-"fluency_f_15_30_errores_francos",
-"fluency_f_30_45_errores_francos",
-"fluency_f_45_60_errores_francos",
+"fluency_s_0_15_errores_francos",
+"fluency_s_15_30_errores_francos",
+"fluency_s_30_45_errores_francos",
+"fluency_s_45_60_errores_francos",
 "fluency_a_0_15_errores_francos",
 "fluency_a_15_30_errores_francos",
 "fluency_a_30_45_errores_francos",
 "fluency_a_45_60_errores_francos",
-"fluency_f_0_15_correctas",
-"fluency_f_15_30_correctas",
-"fluency_f_30_45_correctas",
-"fluency_f_45_60_correctas",
+"fluency_s_0_15_correctas",
+"fluency_s_15_30_correctas",
+"fluency_s_30_45_correctas",
+"fluency_s_45_60_correctas",
 "fluency_a_0_15_correctas",
 "fluency_a_15_30_correctas",
 "fluency_a_30_45_correctas",
@@ -89,22 +89,22 @@ dfFluidez[columnasNan]=dfFluidez[columnasNan].fillna("")
 # %% Lleno con 0 las numéricas
 
 columnasNumericas = [
-"no_pertenece_categoria_0_15_f",
-"no_pertenece_categoria_15_30_f",
-"no_pertenece_categoria_30_45_f",
-"no_pertenece_categoria_45_60_f",
-"palabra_repetida_0_15_f",
-"palabra_repetida_15_30_f",
-"palabra_repetida_30_45_f",
-"palabra_repetida_45_60_f",
-"familia_repetida_misma_0_15_f",
-"familia_repetida_misma_15_30_f",
-"familia_repetida_misma_30_45_f",
-"familia_repetida_misma_45_60_f",
-"nombre_propio_0_15_f",
-"nombre_propio_15_30_f",
-"nombre_propio_30_45_f",
-"nombre_propio_45_60_f",
+"no_pertenece_categoria_0_15_s",
+"no_pertenece_categoria_15_30_s",
+"no_pertenece_categoria_30_45_s",
+"no_pertenece_categoria_45_60_s",
+"palabra_repetida_0_15_s",
+"palabra_repetida_15_30_s",
+"palabra_repetida_30_45_s",
+"palabra_repetida_45_60_s",
+"familia_repetida_misma_0_15_s",
+"familia_repetida_misma_15_30_s",
+"familia_repetida_misma_30_45_s",
+"familia_repetida_misma_45_60_s",
+"nombre_propio_0_15_s",
+"nombre_propio_15_30_s",
+"nombre_propio_30_45_s",
+"nombre_propio_45_60_s",
 "no_pertenece_categoria_0_15_a",
 "no_pertenece_categoria_15_30_a",
 "no_pertenece_categoria_30_45_a",
@@ -133,10 +133,10 @@ for index, row in dfFluidez.iterrows():
     contDupp60=0
 
     # Borro espacios al principio y al final y separo por espacios
-    p15 = row['fluency_f_0_15_correctas'].rstrip().lstrip().split()
-    p30 = row['fluency_f_15_30_correctas'].rstrip().lstrip().split()
-    p45 = row['fluency_f_30_45_correctas'].rstrip().lstrip().split()
-    p60 = row['fluency_f_45_60_correctas'].rstrip().lstrip().split()
+    p15 = row['fluency_s_0_15_correctas'].rstrip().lstrip().split()
+    p30 = row['fluency_s_15_30_correctas'].rstrip().lstrip().split()
+    p45 = row['fluency_s_30_45_correctas'].rstrip().lstrip().split()
+    p60 = row['fluency_s_45_60_correctas'].rstrip().lstrip().split()
     animals15 = row['fluency_a_0_15_correctas'].rstrip().lstrip().split()
     animals30 = row['fluency_a_15_30_correctas'].rstrip().lstrip().split()
     animals45 = row['fluency_a_30_45_correctas'].rstrip().lstrip().split()
@@ -177,10 +177,10 @@ for index, row in dfFluidez.iterrows():
     animals60NoDup,contDupanimals60 = duplicadosDistintasListas(animals45NoDup,animals60NoDup,contDupanimals60)
 
     # Asigno al dataframe los duplicados encontrados
-    dfFluidez.at[index,'palabra_repetida_0_15_f'] = contDupp15
-    dfFluidez.at[index,'palabra_repetida_15_30_f'] = contDupp30
-    dfFluidez.at[index,'palabra_repetida_30_45_f'] = contDupp45
-    dfFluidez.at[index,'palabra_repetida_45_60_f'] = contDupp60
+    dfFluidez.at[index,'palabra_repetida_0_15_s'] = contDupp15
+    dfFluidez.at[index,'palabra_repetida_15_30_s'] = contDupp30
+    dfFluidez.at[index,'palabra_repetida_30_45_s'] = contDupp45
+    dfFluidez.at[index,'palabra_repetida_45_60_s'] = contDupp60
     dfFluidez.at[index,'palabra_repetida_0_15_a'] = contDupanimals15
     dfFluidez.at[index,'palabra_repetida_15_30_a'] = contDupanimals30
     dfFluidez.at[index,'palabra_repetida_30_45_a'] = contDupanimals45
@@ -197,10 +197,10 @@ for index, row in dfFluidez.iterrows():
     animals60NoDup = ' '.join([str(item) for item in animals60NoDup])   
 
     # Lo guardo en el dataFrame
-    dfFluidez.at[index,'fluency_f_0_15_correctas'] = p15NoDup
-    dfFluidez.at[index,'fluency_f_15_30_correctas'] = p30NoDup
-    dfFluidez.at[index,'fluency_f_30_45_correctas'] = p45NoDup
-    dfFluidez.at[index,'fluency_f_45_60_correctas'] = p60NoDup
+    dfFluidez.at[index,'fluency_s_0_15_correctas'] = p15NoDup
+    dfFluidez.at[index,'fluency_s_15_30_correctas'] = p30NoDup
+    dfFluidez.at[index,'fluency_s_30_45_correctas'] = p45NoDup
+    dfFluidez.at[index,'fluency_s_45_60_correctas'] = p60NoDup
     dfFluidez.at[index,'fluency_a_0_15_correctas'] = animals15NoDup
     dfFluidez.at[index,'fluency_a_15_30_correctas'] = animals30NoDup
     dfFluidez.at[index,'fluency_a_30_45_correctas'] = animals45NoDup
@@ -227,10 +227,10 @@ pacLemmaanimalsDupMisma = []
 pacLemmaanimalsDupDistinta = []
 for index, row in dfFluidez.iterrows():
 
-    p15NoDup = row['fluency_f_0_15_correctas']
-    p30NoDup = row['fluency_f_15_30_correctas']
-    p45NoDup = row['fluency_f_30_45_correctas']
-    p60NoDup = row['fluency_f_45_60_correctas']
+    p15NoDup = row['fluency_s_0_15_correctas']
+    p30NoDup = row['fluency_s_15_30_correctas']
+    p45NoDup = row['fluency_s_30_45_correctas']
+    p60NoDup = row['fluency_s_45_60_correctas']
     animals15NoDup = row['fluency_a_0_15_correctas']
     animals30NoDup = row['fluency_a_15_30_correctas']
     animals45NoDup = row['fluency_a_30_45_correctas']
@@ -334,10 +334,10 @@ pacStemanimalsDupMisma = []
 pacStemanimalsDupDistinta = []
 for index, row in dfFluidez.iterrows():
 
-    p15NoDup = row['fluency_f_0_15_correctas']
-    p30NoDup = row['fluency_f_15_30_correctas']
-    p45NoDup = row['fluency_f_30_45_correctas']
-    p60NoDup = row['fluency_f_45_60_correctas']
+    p15NoDup = row['fluency_s_0_15_correctas']
+    p30NoDup = row['fluency_s_15_30_correctas']
+    p45NoDup = row['fluency_s_30_45_correctas']
+    p60NoDup = row['fluency_s_45_60_correctas']
     animals15NoDup = row['fluency_a_0_15_correctas']
     animals30NoDup = row['fluency_a_15_30_correctas']
     animals45NoDup = row['fluency_a_30_45_correctas']
