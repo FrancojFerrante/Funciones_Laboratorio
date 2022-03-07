@@ -10,6 +10,7 @@ Created on Tue Aug 31 18:48:11 2021
 import pandas as pd
 from os import listdir
 
+import xlsxwriter
 
 def read_csv_to_dataframe(path, page = "", header = 0):
     """
@@ -62,3 +63,37 @@ def file_names_to_dataframe(path,column_name):
     archivos = list(dict.fromkeys(archivos))
     df = pd.DataFrame(archivos, columns=[column_name])
     return df
+
+def anova_to_excel(df,path,filename):
+    
+    # Open an Excel workbook
+    if (filename[-5:] == ".xlsx"):
+        workbook = xlsxwriter.Workbook(path+"//"+filename)
+    else:
+        workbook = xlsxwriter.Workbook(path+"//"+filename+".xlsx")
+
+    # Set up a format
+    book_format = workbook.add_format(properties={'bold': True, 'font_color': 'red'})
+
+    # Create a sheet
+    worksheet = workbook.add_worksheet('dict_data')
+
+    # Write the headers
+    for col_num, header in enumerate(df.columns):
+        worksheet.write(0,col_num, header)
+
+    # Save the data from the OrderedDict into the excel sheet
+    for row_num,row_data in df.iterrows():
+        for col_num, cell_data in enumerate(row_data):
+            if row_data["p-unc_y"] <0.05:
+                if(str(cell_data)=="nan"):
+                    worksheet.write(row_num+1, col_num, "", book_format)
+                else:
+                    worksheet.write(row_num+1, col_num, cell_data, book_format)
+            else:
+                if(str(cell_data)=="nan"):
+                    worksheet.write(row_num+1, col_num, "")
+                else:
+                    worksheet.write(row_num+1, col_num, cell_data)
+    # Close the workbook
+    workbook.close()
