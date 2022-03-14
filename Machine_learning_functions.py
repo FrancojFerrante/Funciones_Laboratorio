@@ -104,7 +104,7 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
 
 def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance=""):
     
-    svm_model = svm.SVC(max_iter=100000)
+    svm_model = svm.SVC(kernel = "linear",max_iter=100000)
 
     df_resultados = pd.DataFrame(columns=[["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"]])
         
@@ -121,6 +121,7 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
     f1 = []
     cm_total = [[0,0],[0,0]]
     
+    importances_matrix = []
 
     for train_index, test_index in kf.split(df_actual, df_actual[group_column]):
         X_train = df_actual.iloc[train_index].loc[:, features]
@@ -143,30 +144,32 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
         cm_total[1][0] += cm_actual[1][0]
         cm_total[0][1] += cm_actual[0][1]
         cm_total[1][1] += cm_actual[1][1]
-    
+        
+        importances_matrix.append(svm_model.coef_[0])
+
     df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels[0]+"-"+group_labels[1],"SVM",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
     
-    # if n_importances>0:
-    #     df_importances = pd.DataFrame(data={
-    #         'attribute': features,
-    #         'importance': 0
-    #     })
+    if n_importances>0:
+        df_importances = pd.DataFrame(data={
+            'attribute': features,
+            'importance': 0
+        })
         
-    #     df_importances["importance"] = np.mean(np.vstack(importances_matrix),axis=0)
-    #     df_importances["importance_abs"] = np.abs(df_importances["importance"])
-    #     df_importances = df_importances.sort_values(by='importance_abs', ascending=False)
+        df_importances["importance"] = np.mean(np.vstack(importances_matrix),axis=0)
+        df_importances["importance_abs"] = np.abs(df_importances["importance"])
+        df_importances = df_importances.sort_values(by='importance_abs', ascending=False)
     
-    #     n = 20
-    #     df_importances = df_importances.nlargest(n, 'importance_abs')
+        n = 20
+        df_importances = df_importances.nlargest(n, 'importance_abs')
     
-    #     df_importances = df_importances.sort_values(by='importance', ascending=False)
+        df_importances = df_importances.sort_values(by='importance', ascending=False)
     
-    #     fig=plt.figure();
-    #     plt.bar(x=df_importances['attribute'], height=df_importances['importance'], color='#087E8B')
-    #     plt.title('Feature importances obtained from coefficients')
-    #     plt.xticks(rotation='vertical')
-    #     plt.savefig(path_feature_importance+".png",bbox_inches='tight')
-    #     plt.close(fig)
+        fig=plt.figure();
+        plt.bar(x=df_importances['attribute'], height=df_importances['importance'], color='#087E8B')
+        plt.title('Feature importances obtained from coefficients')
+        plt.xticks(rotation='vertical')
+        plt.savefig(path_feature_importance+".png",bbox_inches='tight')
+        plt.close(fig)
     
     
     if path_confusion_matrix!= "":
@@ -204,6 +207,7 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
     f1 = []
     cm_total = [[0,0],[0,0]]
     
+    importances_matrix = []
 
     for train_index, test_index in kf.split(df_actual, df_actual[group_column]):
         X_train = df_actual.iloc[train_index].loc[:, features]
@@ -227,29 +231,31 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
         cm_total[0][1] += cm_actual[0][1]
         cm_total[1][1] += cm_actual[1][1]
     
+        importances_matrix.append(xg_model.feature_importances_)
+
     df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels[0]+"-"+group_labels[1],"SVM",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
     
-    # if n_importances>0:
-    #     df_importances = pd.DataFrame(data={
-    #         'attribute': features,
-    #         'importance': 0
-    #     })
+    if n_importances>0:
+        df_importances = pd.DataFrame(data={
+            'attribute': features,
+            'importance': 0
+        })
         
-    #     df_importances["importance"] = np.mean(np.vstack(importances_matrix),axis=0)
-    #     df_importances["importance_abs"] = np.abs(df_importances["importance"])
-    #     df_importances = df_importances.sort_values(by='importance_abs', ascending=False)
+        df_importances["importance"] = np.mean(np.vstack(importances_matrix),axis=0)
+        df_importances["importance_abs"] = np.abs(df_importances["importance"])
+        df_importances = df_importances.sort_values(by='importance_abs', ascending=False)
     
-    #     n = 20
-    #     df_importances = df_importances.nlargest(n, 'importance_abs')
+        n = 20
+        df_importances = df_importances.nlargest(n, 'importance_abs')
     
-    #     df_importances = df_importances.sort_values(by='importance', ascending=False)
+        df_importances = df_importances.sort_values(by='importance', ascending=False)
     
-    #     fig=plt.figure();
-    #     plt.bar(x=df_importances['attribute'], height=df_importances['importance'], color='#087E8B')
-    #     plt.title('Feature importances obtained from coefficients')
-    #     plt.xticks(rotation='vertical')
-    #     plt.savefig(path_feature_importance+".png",bbox_inches='tight')
-    #     plt.close(fig)
+        fig=plt.figure();
+        plt.bar(x=df_importances['attribute'], height=df_importances['importance'], color='#087E8B')
+        plt.title('Feature importances obtained from coefficients')
+        plt.xticks(rotation='vertical')
+        plt.savefig(path_feature_importance+".png",bbox_inches='tight')
+        plt.close(fig)
     
     
     if path_confusion_matrix!= "":
