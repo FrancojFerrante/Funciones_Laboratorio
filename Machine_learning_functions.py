@@ -16,18 +16,16 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import svm
 from xgboost import XGBClassifier
+from sklearn.preprocessing import MinMaxScaler
 
 def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance=""):
     
     logisticRegr = LogisticRegression(max_iter=100000)
 
-    df_resultados = pd.DataFrame(columns=[["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"]])
+    df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
         
     df_actual = df.dropna(subset = features)
-    
-    if normalization:
-        df_actual[features]=(df_actual[features]-df_actual[features].min())/(df_actual[features].max()-df_actual[features].min())
-        
+      
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
     precision = []
@@ -43,7 +41,14 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
         X_test = df_actual.iloc[test_index].loc[:,features]
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
-    
+        
+        # Normalizo
+        if normalization:
+            scaler = MinMaxScaler()
+            scaler.fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
+        
         #Train the model
         logisticRegr.fit(X_train, y_train) #Training the model
         predictions = logisticRegr.predict(X_test)
@@ -106,13 +111,10 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
     
     svm_model = svm.SVC(kernel = "linear",max_iter=100000)
 
-    df_resultados = pd.DataFrame(columns=[["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"]])
+    df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
         
     df_actual = df.dropna(subset = features)
     
-    if normalization:
-        df_actual[features]=(df_actual[features]-df_actual[features].min())/(df_actual[features].max()-df_actual[features].min())
-        
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
     precision = []
@@ -129,6 +131,13 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
     
+        # Normalizo
+        if normalization:
+            scaler = MinMaxScaler()
+            scaler.fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
+            
         #Train the model
         svm_model.fit(X_train, y_train) #Training the model
         predictions = svm_model.predict(X_test)
@@ -192,13 +201,10 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
     
     xg_model = XGBClassifier(max_iter=100000)
 
-    df_resultados = pd.DataFrame(columns=[["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"]])
+    df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
         
     df_actual = df.dropna(subset = features)
-    
-    if normalization:
-        df_actual[features]=(df_actual[features]-df_actual[features].min())/(df_actual[features].max()-df_actual[features].min())
-        
+
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
     precision = []
@@ -215,6 +221,13 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
     
+        # Normalizo
+        if normalization:
+            scaler = MinMaxScaler()
+            scaler.fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
+            
         #Train the model
         xg_model.fit(X_train, y_train) #Training the model
         predictions = xg_model.predict(X_test)
@@ -233,7 +246,7 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
     
         importances_matrix.append(xg_model.feature_importances_)
 
-    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels[0]+"-"+group_labels[1],"SVM",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
+    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels[0]+"-"+group_labels[1],"XGBoost",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
     
     if n_importances>0:
         df_importances = pd.DataFrame(data={

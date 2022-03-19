@@ -162,6 +162,7 @@ def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,d
     resultado_total_sin_outliers = pd.DataFrame(columns=["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
     
     for columna in columnas:
+        print(columna)
         separado = columna.split("_")
         col_fonologica = separado[0]+"_"+prueba_1+"_"+"_".join(separado[1:])
         col_semantica = separado[0]+"_"+prueba_2+"_"+"_".join(separado[1:])
