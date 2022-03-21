@@ -17,8 +17,10 @@ import seaborn as sns
 from sklearn import svm
 from xgboost import XGBClassifier
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.impute import KNNImputer
 
-def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance=""):
+
+def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False):
     
     logisticRegr = LogisticRegression(max_iter=100000)
 
@@ -41,6 +43,16 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
         X_test = df_actual.iloc[test_index].loc[:,features]
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
+        
+        # Hago inputación con knn
+        if data_input:
+            imputer = KNNImputer()
+            # fit on the dataset
+            imputer.fit(X_train)
+            # transform the dataset
+            X_train = imputer.transform(X_train)
+            X_test = imputer.transform(X_test)
+
         
         # Normalizo
         if normalization:
@@ -107,7 +119,7 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
     
     return df_resultados
 
-def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance=""):
+def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False):
     
     svm_model = svm.SVC(kernel = "linear",max_iter=100000)
 
@@ -131,6 +143,15 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
     
+        # Hago inputación con knn
+        if data_input:
+            imputer = KNNImputer()
+            # fit on the dataset
+            imputer.fit(X_train)
+            # transform the dataset
+            X_train = imputer.transform(X_train)
+            X_test = imputer.transform(X_test)
+            
         # Normalizo
         if normalization:
             scaler = MinMaxScaler()
@@ -197,7 +218,7 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
     return df_resultados
 
 
-def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance=""):
+def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=False,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False):
     
     xg_model = XGBClassifier(max_iter=100000)
 
@@ -221,6 +242,15 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
         y_train = df_actual.iloc[train_index].loc[:,group_column]
         y_test = df_actual.iloc[test_index].loc[:,group_column]
     
+        # Hago inputación con knn
+        if data_input:
+            imputer = KNNImputer()
+            # fit on the dataset
+            imputer.fit(X_train)
+            # transform the dataset
+            X_train = imputer.transform(X_train)
+            X_test = imputer.transform(X_test)
+            
         # Normalizo
         if normalization:
             scaler = MinMaxScaler()
