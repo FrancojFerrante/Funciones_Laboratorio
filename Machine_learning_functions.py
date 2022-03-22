@@ -25,8 +25,11 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
     logisticRegr = LogisticRegression(max_iter=100000)
 
     df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
-        
-    df_actual = df.dropna(subset = features)
+    
+    if not data_input:
+        df_actual = df.dropna(subset = features)
+    else:
+        df_actual = df.copy(deep=True)
       
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
@@ -39,6 +42,24 @@ def logistic_regression_cross_validation(df,group_labels,group_column,features,k
     importances_matrix = []
 
     for train_index, test_index in kf.split(df_actual, df_actual[group_column]):
+        # df_actual_train = df_actual.iloc[train_index]
+        # df_actual_train_control = df_actual_train[df_actual_train[group_column] == 0]
+        # df_actual_train_no_control = df_actual_train[df_actual_train[group_column] == 1]
+        
+        # imputer_control = KNNImputer()
+        # # fit on the dataset
+        # imputer_control.fit(df_actual_train_control)
+        # # transform the dataset
+        # df_actual_train_control = imputer_control.transform(df_actual_train_control)
+        
+        # imputer_no_control = KNNImputer()
+        # # fit on the dataset
+        # imputer_no_control.fit(df_actual_train_no_control)
+        # # transform the dataset
+        # df_actual_train_no_control = imputer_no_control.transform(df_actual_train_no_control)
+        
+        # X_test = imputer.transform(X_test)
+        
         X_train = df_actual.iloc[train_index].loc[:, features]
         X_test = df_actual.iloc[test_index].loc[:,features]
         y_train = df_actual.iloc[train_index].loc[:,group_column]
@@ -125,7 +146,10 @@ def svm_cross_validation(df,group_labels,group_column,features,k_fold,random_see
 
     df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
         
-    df_actual = df.dropna(subset = features)
+    if not data_input:
+        df_actual = df.dropna(subset = features)
+    else:
+        df_actual = df.copy(deep=True)
     
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
@@ -224,7 +248,10 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
 
     df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
         
-    df_actual = df.dropna(subset = features)
+    if not data_input:
+        df_actual = df.dropna(subset = features)
+    else:
+        df_actual = df.copy(deep=True)
 
     kf = StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed)
     accuracy = []
