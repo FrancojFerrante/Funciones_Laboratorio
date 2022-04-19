@@ -11,7 +11,9 @@ Created on Wed Sep  1 11:53:23 2021
 import numpy as np
 import matplotlib as plt
 import matplotlib.pyplot as plt
-
+import plotly.io as pio
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 def plot_multiple_barras_vertical_from_dataframe(df,columnas,labels_x, label_y, label_legend, title,  width, formato=0, padding = 0, fontsize = 8.5, pie_figura = "",fig_text_space = -0.2,rotation = 0,legend_position=0):
@@ -101,3 +103,76 @@ def plot_multiple_barras_vertical_from_lists(labels_x, label_y, label_legend, ti
     fig.tight_layout()
     
     plt.show()
+    
+def radar_plot(df, values, groups, features, title, path, file_name="radar_plot.png", axis_range = [0.4,0.9], title_x=0.51, legend_x = 0.7, legend_y = 1.01, show = True,group_color=None ):
+    
+    fig = px.line_polar(data_frame=df,
+                        r=values,
+                        theta=features,
+                        line_close=True,
+                        color=groups,
+                        range_r = axis_range,
+                        color_discrete_map=group_color)
+        
+    fig.update_traces(fill='toself')
+    fig.update_layout(
+        legend=dict(
+            x=legend_x,
+            y=legend_y,
+            traceorder="normal",
+            bgcolor= 'rgba(0,0,0,0)',
+            font=dict(
+                family="sans-serif",
+                size=14,
+                color="black"
+            ),
+        ),
+        title_text=title, title_x=title_x,
+        legend_title_text=''
+    )
+    if show:
+        fig.show()
+    fig.write_image(path+"//"+file_name)
+
+def roc_curve(df,legends,auc_means,auc_stds,xs,ys,colors,titulo,path,filename,width=1200,height=600,title_x=0.41):
+    
+    fig = go.Figure()
+    fig.add_shape(
+        type='line', line=dict(dash='dash',color='black'),
+        x0=0, x1=1, y0=0, y1=1
+    )
+    
+    for i_legend,legend in enumerate(legends):
+        fig.add_traces(go.Scatter(name=legend+" (AUC = " + "{:.2f}".format(auc_means[i_legend]) + "±" + "{:.2f}".format(auc_stds[i_legend])+")",\
+                                  x=df[xs[i_legend]],y=df[ys[i_legend]], mode = 'lines', line=dict(color=colors[i_legend])))
+                                  
+    fig['data'][0]['showlegend']=True
+    layout = go.Layout(
+    autosize=False,
+    width=width,
+    height=height,
+    title_text=titulo, title_x=title_x,
+    legend=dict(
+        traceorder="normal",
+        bgcolor= 'rgba(0,0,0,0)',
+        font=dict(
+            family="sans-serif",
+            size=14,
+            color="black"
+        ),
+    ),
+    xaxis=dict(
+        title="False Positive Rate",
+        title_font = {"size": 20},
+        range=[0, 1]
+    ),
+    yaxis=dict(
+        title="True Positive Rate",
+        title_font = {"size": 20},
+        range=[0, 1]
+    ) ) 
+
+    fig.update_layout(layout)
+    # fig.show()
+    fig.write_image(path+"//"+filename)
+    
