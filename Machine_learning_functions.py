@@ -56,7 +56,7 @@ def pipeline_cross_validation(df,ml_classifier,group_labels,group_column,feature
     df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
     df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),"Regresión logística",str(k_fold),str(normalization),np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),np.mean(scores['test_auc']),np.mean(scores['test_f1_score'])]
    
-    return (scores,df_resultados)
+    return scores,df_resultados
 
 def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = 123,normalization=True,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False,feature_selection=0):
     
