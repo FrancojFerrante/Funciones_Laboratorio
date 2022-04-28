@@ -24,7 +24,7 @@ from sklearn.feature_selection import RFECV
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
 
-def pipeline_cross_validation(df,ml_classifier,group_labels,group_column,features,k_fold,random_seed = 123,normalization=True,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False,feature_selection=False):
+def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = 123,normalization=True,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False,feature_selection=False):
     
 
     pipeline_list = []
@@ -36,7 +36,7 @@ def pipeline_cross_validation(df,ml_classifier,group_labels,group_column,feature
         pipeline_list.append(('scaler',MinMaxScaler()))
         
     if feature_selection:
-        pipeline_list.append(('feat_sel',RFECV(estimator=ml_classifier,n_jobs=-1,step=2,)))
+        pipeline_list.append(('feat_sel',RFECV(estimator=ml_classifier,n_jobs=-1,step=1)))
         
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=1, random_state=random_seed)
@@ -53,8 +53,11 @@ def pipeline_cross_validation(df,ml_classifier,group_labels,group_column,feature
     scores = cross_validate(pipeline, df[features], df[group_column], scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True)
     
+    scores["classifier"]=classifier_name
+    scores["group"]=group_labels
+    scores["k_fold"]=k_fold
     df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
-    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),"Regresión logística",str(k_fold),str(normalization),np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),np.mean(scores['test_auc']),np.mean(scores['test_f1_score'])]
+    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),np.mean(scores['test_auc']),np.mean(scores['test_f1_score'])]
    
     return scores,df_resultados
 
