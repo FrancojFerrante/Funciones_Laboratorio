@@ -36,7 +36,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         pipeline_list.append(('scaler',MinMaxScaler()))
         
     if feature_selection:
-        pipeline_list.append(('feat_sel',RFECV(estimator=ml_classifier,n_jobs=-1,step=1)))
+        pipeline_list.append(('feat_sel',RFECV(estimator=ml_classifier,step=1)))
         
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
@@ -54,7 +54,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     pipeline = Pipeline(pipeline_list)
 
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
-    scores = cross_validate(pipeline, df[features], df[group_column], scoring=scoring,fit_params=scoring,
+    scores = cross_validate(pipeline, df[features], df[group_column], scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True)
     
     scores["classifier"]=classifier_name
