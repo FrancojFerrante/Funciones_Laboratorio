@@ -23,20 +23,28 @@ from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
-
+    # pipe_a = Pipeline(steps=[('imp', SimpleImputer()),
+    #                      ('scale', StandardScaler())])
+    transformers = []
     pipeline_list = []
-
-    if data_input:
-        pipeline_list.append(('imputer',KNNImputer()))
-        
-    if normalization:
-        pipeline_list.append(('scaler',MinMaxScaler()))
+    
+    if data_input | normalization:
+        if data_input:
+            transformers.append(('imputer',KNNImputer()))
+            
+        if normalization:
+            transformers.append(('scaler',MinMaxScaler()))
+        pipe_transformer = Pipeline(steps=transformers)
+        preprocessor = ColumnTransformer(transformers= [('preprocessor',pipe_transformer,features)])
+        pipeline_list.append(('preprocessor',preprocessor))
         
     if feature_selection:
-        pipeline_list.append(('feat_sel',RFECV(estimator=ml_classifier,step=1)))
+        svm_model = svm.SVC(kernel = "linear",max_iter=100000)
+        pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
         
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
@@ -509,38 +517,42 @@ def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo
                 #                              df_combinado_labels_list[i_label]+"_k-"+str(k_fold), data_input = data_input,feature_selection=feature_selection))
     return (scores_list,df_clasificador_multi)
 
-def tres_clasificadores(df,df_labels,columnas_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=False,multi=False,random_seed=None,n_repeats=1):
+def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=False,multi=False,random_seed=None,n_repeats=1):
     
     scores_list = []
     resultados=[]
-    # Regresión logística
-    (scores,df_clasificador_multi_regresion) = menu_clasificador("rl",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_regresion_logistica//multi_feature"\
-                                                        + tipo_columnas,path+"/feature_importance_regresion_logistica/multi_feature_"\
-                                                        + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
-
-    df_clasificador_multi_regresion.to_excel(path+"/resultados_machine_learning/resultados_regresion_logistica_multi_"+\
-                                             tipo_columnas+".xlsx")
-    resultados.append(df_clasificador_multi_regresion)
-    scores_list.append(scores)
     
-    
-    # SVM
-    (scores,df_clasificador_multi_svm) = menu_clasificador("svm",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_svm//multi_feature" +\
-                                                  tipo_columnas,path+"/feature_importance_svm/multi_feature_" +\
-                                                  tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
-
-    df_clasificador_multi_svm.to_excel(path+"/resultados_machine_learning/resultados_svm_multi_"+tipo_columnas+".xlsx")
-    resultados.append(df_clasificador_multi_svm)
-    scores_list.append(scores)
-
-    # xgboost
-    (scores,df_clasificador_multi_xg) = menu_clasificador("xgboost",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_xg//multi_feature" +\
-                                                 tipo_columnas,path+"/feature_importance_xgboost/multi_feature_" +\
-                                                 tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
+    for clasificador in clasificadores:
+        if clasificador == 'rl':
+            # Regresión logística
+            (scores,df_clasificador_multi_regresion) = menu_clasificador("rl",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_regresion_logistica//multi_feature"\
+                                                                + tipo_columnas,path+"/feature_importance_regresion_logistica/multi_feature_"\
+                                                                + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
         
-    df_clasificador_multi_xg.to_excel(path+"/resultados_machine_learning/resultados_xg_multi_"+tipo_columnas+".xlsx")
-    resultados.append(df_clasificador_multi_xg)
-    scores_list.append(scores)
+            df_clasificador_multi_regresion.to_excel(path+"/resultados_machine_learning/resultados_regresion_logistica_multi_"+\
+                                                     tipo_columnas+".xlsx")
+            resultados.append(df_clasificador_multi_regresion)
+            scores_list.append(scores)
+        
+        elif clasificador == 'svm':
+            # SVM
+            (scores,df_clasificador_multi_svm) = menu_clasificador("svm",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_svm//multi_feature" +\
+                                                          tipo_columnas,path+"/feature_importance_svm/multi_feature_" +\
+                                                          tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
+        
+            df_clasificador_multi_svm.to_excel(path+"/resultados_machine_learning/resultados_svm_multi_"+tipo_columnas+".xlsx")
+            resultados.append(df_clasificador_multi_svm)
+            scores_list.append(scores)
+        
+        elif clasificador=='xgboost':
+        # xgboost
+            (scores,df_clasificador_multi_xg) = menu_clasificador("xgboost",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_xg//multi_feature" +\
+                                                     tipo_columnas,path+"/feature_importance_xgboost/multi_feature_" +\
+                                                     tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
+            
+            df_clasificador_multi_xg.to_excel(path+"/resultados_machine_learning/resultados_xg_multi_"+tipo_columnas+".xlsx")
+            resultados.append(df_clasificador_multi_xg)
+            scores_list.append(scores)
 
     return (scores_list,resultados)
 
