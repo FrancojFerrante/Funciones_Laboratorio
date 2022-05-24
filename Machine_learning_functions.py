@@ -77,6 +77,126 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
    
     return scores,df_resultados
 
+def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
+    
+    
+    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
+                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1"])
+    scores_list = []
+    model = None
+    
+    if clasificador == "regresion_logistica":
+        model = LogisticRegression(max_iter=100000,)
+    elif clasificador == "svm":
+        model = svm.SVC(kernel = "linear",max_iter=100000)
+    elif clasificador == "xgboost":
+        model = XGBClassifier()
+        
+    for i_label, df_combinado in enumerate(df):
+        scores_list.append([])
+        for folds_counter,k_fold in enumerate(k_folds):
+            (scores_clasi, df_clasif) = pipeline_cross_validation(df_combinado,model, clasificador,\
+                                      df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
+                                      normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
+            df_clasificador_multi = df_clasificador_multi.append(df_clasif)
+            scores_list[i_label].append(scores_clasi)
+                
+
+    return (scores_list,df_clasificador_multi)
+
+def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=False,multi=False,random_seed=None,n_repeats=1):
+    
+    scores_list = []
+    resultados=[]
+    
+    for clasificador in clasificadores:
+        (scores,df_clasificador_multi) = menu_clasificador(clasificador,df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_"+clasificador+"//multi_feature"\
+                                                            + tipo_columnas,path+"/feature_importance_"+clasificador+"/multi_feature_"\
+                                                            + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
+    
+        df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
+                                                 tipo_columnas+".xlsx")
+        resultados.append(df_clasificador_multi)
+        scores_list.append(scores)
+
+    return (scores_list,resultados)
+
+# Ploteo feature importance entregado por el clasificador
+def feature_importance_not_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_feature_importance,cwd):
+        
+    for i_base, base in enumerate(scores_list):
+        if "feat" not in databases_labels[i_base]:
+
+            for i_algorithm, algorithm in enumerate(base):
+                for i_group,group in enumerate(algorithm):
+                    for i_fold,fold in enumerate(group):
+                        # creating the dataset
+                        num_features_dict = dict()
+                        importances_matrix = []
+
+                        for i_pipe,pipe in enumerate(fold["estimator"]):
+                            # feature_importance = FeatureImportance(pipe)
+                            # feature_importance.plot(top_n_features=1)
+                            if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
+                                importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
+                            elif algorithm_label[i_algorithm] == "xgboost":
+                                importances_matrix.append(pipe["model"].feature_importances_)
+
+                        y_values = np.mean(np.vstack(importances_matrix),axis=0)
+                        x_values = fold["estimator"][0]["preprocessor"]._columns[0]
+                        data = {'x_values':x_values,'y_values':y_values}
+                        df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False).head(n_feature_importance)
+                        
+                        fig = plt.figure(figsize = (10, 5))
+                        plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color ='blue', width = 0.4)
+                        plt.xlabel("Base")
+                        plt.ylabel("Feature importance")
+                        plt.xticks(rotation = 90) # Rotates X-Axis Ticks by 90-degrees
+                        plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
+
+                        # plt.show()
+                        plt.savefig(cwd+"/feature_importance_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+".png",\
+                                    bbox_inches='tight')
+
+def feature_importance_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,cwd):
+    # ploteo la feature importance por cantidad de veces que fue elegida la feature.
+
+    for i_base, base in enumerate(scores_list):
+        if "feat_sel" in databases_labels[i_base]:
+            for i_algorithm, algorithm in enumerate(base):
+                for i_group,group in enumerate(algorithm):
+                    for i_fold,fold in enumerate(group):
+                        # creating the dataset
+                        num_features_dict = dict()
+            
+                        for i_pipe,pipe in enumerate(fold["estimator"]):
+                            features = [f for f,s in zip(pipe.feature_names_in_, pipe["feat_sel"].support_) if s]
+                            for feature in features:    
+                                if feature in num_features_dict:
+                                    num_features_dict[feature] = num_features_dict[feature]+1
+                                else:
+                                    num_features_dict[feature] = 1
+            
+                        courses = list(num_features_dict.keys())
+                        values = list(num_features_dict.values())
+                        
+                        fig = plt.figure(figsize = (10, 5))
+            
+                        # creating the bar plot
+                        plt.bar(courses, values, color ='blue',
+                                width = 0.4)
+                         
+                        plt.xlabel("Base")
+                        plt.ylabel("N° times feature selected")
+                        plt.xticks(rotation=90)
+                        plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
+                        # plt.show()
+                        
+                        plt.savefig(cwd+"/feature_importance_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+".png",\
+                                    bbox_inches='tight')
+
+           
+
 def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False,feature_selection=0):
     
     logisticRegr = LogisticRegression(max_iter=100000,)
@@ -410,7 +530,7 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
     
         importances_matrix.append(xg_model.feature_importances_)
 
-    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),"XGBoost",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
+    df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),"xgboost",str(k_fold),str(normalization),np.mean(accuracy),np.mean(precision),np.mean(recall),np.mean(auc),np.mean(f1)]
     
     # if n_importances>0:
     #     df_importances = pd.DataFrame(data={
@@ -449,110 +569,3 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
         df_resultados.to_excel(path_excel+".xlsx")
     
     return df_resultados
-
-def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
-    
-    
-    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
-                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1"])
-    scores_list = []
-    n_features_importance = 20
-
-    if clasificador == "rl":
-        logisticRegr = LogisticRegression(max_iter=100000,)
-        for i_label, df_combinado in enumerate(df):
-            scores_list.append([])
-            for folds_counter,k_fold in enumerate(k_folds):
-                (scores_clasi, df_clasif_lg) = pipeline_cross_validation(df_combinado,logisticRegr, "Regresión Logística",\
-                                          df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
-                                          normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
-                df_clasificador_multi = df_clasificador_multi.append(df_clasif_lg)
-                scores_list[i_label].append(scores_clasi)
-                    
-                # df_clasificador_multi = df_clasificador_multi.append(mlf.logistic_regression_cross_validation(df_combinado,\
-                #                           ["CN",df_combinado_labels_list[i_label]], "Grupo", columnas, k_fold,random_seed = 123,\
-                #                           normalization=True, path_confusion_matrix = path_confusion_matrix+\
-                #                             df_combinado_labels_list[i_label]+"_k-"+str(k_fold),path_excel = "",\
-                #                             n_importances = n_features_importance, path_feature_importance= \
-                #                             path_feature_importance+str(n_features_importance)+"_CTR-"+\
-                #                             df_combinado_labels_list[i_label]+"_k-"+str(k_fold), data_input = data_input,feature_selection=feature_selection))
-    elif clasificador == "svm":
-        svm_model = svm.SVC(kernel = "linear",max_iter=100000)
-
-        for i_label, df_combinado in enumerate(df):
-            scores_list.append([])
-
-            for folds_counter,k_fold in enumerate(k_folds):
-                (scores_clasi, df_clasif_svm) = pipeline_cross_validation(df_combinado,svm_model, "SVM",\
-                                          df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
-                                          normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
-                df_clasificador_multi = df_clasificador_multi.append(df_clasif_svm)
-                scores_list[i_label].append(scores_clasi)
-
-                # df_clasificador_multi = df_clasificador_multi.append(mlf.svm_cross_validation(df_combinado,\
-                #                           ["CN",df_combinado_labels_list[i_label]], "Grupo", columnas, k_fold,random_seed = 123,\
-                #                           normalization=True, path_confusion_matrix = path_confusion_matrix+\
-                #                           df_combinado_labels_list[i_label]+"_k-"+str(k_fold),path_excel = "", n_importances = \
-                #                           n_features_importance, path_feature_importance= path_feature_importance+\
-                #                           str(n_features_importance)+"_CTR-"+df_combinado_labels_list[i_label]+"_k-"+str(k_fold),\
-                #                           data_input = data_input,feature_selection=feature_selection))
-    elif clasificador == "xgboost":
-        xg_model = XGBClassifier()
-        for i_label, df_combinado in enumerate(df):
-            scores_list.append([])
-
-            for folds_counter,k_fold in enumerate(k_folds):
-                (scores_clasi, df_clasif_xg) = pipeline_cross_validation(df_combinado,xg_model, "XGBoost",df_labels[i_label],\
-                                             columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
-                                             normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
-                df_clasificador_multi = df_clasificador_multi.append(df_clasif_xg)
-                scores_list[i_label].append(scores_clasi)
-
-                # df_clasificador_multi = df_clasificador_multi.append(mlf.xgboost_cross_validation(df_combinado,["CN",\
-                #                             df_combinado_labels_list[i_label]], "Grupo", columnas, k_fold,random_seed = 123,\
-                #                              normalization=True, path_confusion_matrix = path_confusion_matrix+\
-                #                              df_combinado_labels_list[i_label]+"_k-"+str(k_fold),path_excel = "",\
-                #                              n_importances = n_features_importance, path_feature_importance=\
-                #                              path_feature_importance+str(n_features_importance)+"_CTR-"+\
-                #                              df_combinado_labels_list[i_label]+"_k-"+str(k_fold), data_input = data_input,feature_selection=feature_selection))
-    return (scores_list,df_clasificador_multi)
-
-def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=False,multi=False,random_seed=None,n_repeats=1):
-    
-    scores_list = []
-    resultados=[]
-    
-    for clasificador in clasificadores:
-        if clasificador == 'rl':
-            # Regresión logística
-            (scores,df_clasificador_multi_regresion) = menu_clasificador("rl",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_regresion_logistica//multi_feature"\
-                                                                + tipo_columnas,path+"/feature_importance_regresion_logistica/multi_feature_"\
-                                                                + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
-        
-            df_clasificador_multi_regresion.to_excel(path+"/resultados_machine_learning/resultados_regresion_logistica_multi_"+\
-                                                     tipo_columnas+".xlsx")
-            resultados.append(df_clasificador_multi_regresion)
-            scores_list.append(scores)
-        
-        elif clasificador == 'svm':
-            # SVM
-            (scores,df_clasificador_multi_svm) = menu_clasificador("svm",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_svm//multi_feature" +\
-                                                          tipo_columnas,path+"/feature_importance_svm/multi_feature_" +\
-                                                          tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
-        
-            df_clasificador_multi_svm.to_excel(path+"/resultados_machine_learning/resultados_svm_multi_"+tipo_columnas+".xlsx")
-            resultados.append(df_clasificador_multi_svm)
-            scores_list.append(scores)
-        
-        elif clasificador=='xgboost':
-        # xgboost
-            (scores,df_clasificador_multi_xg) = menu_clasificador("xgboost",df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_xg//multi_feature" +\
-                                                     tipo_columnas,path+"/feature_importance_xgboost/multi_feature_" +\
-                                                     tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
-            
-            df_clasificador_multi_xg.to_excel(path+"/resultados_machine_learning/resultados_xg_multi_"+tipo_columnas+".xlsx")
-            resultados.append(df_clasificador_multi_xg)
-            scores_list.append(scores)
-
-    return (scores_list,resultados)
-
