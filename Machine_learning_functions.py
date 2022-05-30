@@ -44,7 +44,10 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         
     if feature_selection:
         svm_model = svm.SVC(kernel = "linear",max_iter=100000)
-        pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
+        if not multi:
+            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
+        else:
+            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
         
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
@@ -122,7 +125,7 @@ def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_g
     return (scores_list,resultados)
 
 # Ploteo feature importance entregado por el clasificador
-def feature_importance_not_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_feature_importance,cwd):
+def feature_importance_not_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_feature_importance,n_repeats,cwd):
         
     for i_base, base in enumerate(scores_list):
         if "feat" not in databases_labels[i_base]:
@@ -155,10 +158,10 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                         plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
 
                         # plt.show()
-                        plt.savefig(cwd+"/feature_importance_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+".png",\
+                        plt.savefig(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
 
-def feature_importance_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,cwd):
+def feature_importance_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_repeats,cwd):
     # ploteo la feature importance por cantidad de veces que fue elegida la feature.
 
     for i_base, base in enumerate(scores_list):
@@ -192,7 +195,7 @@ def feature_importance_feat_selection(scores_list,databases_labels,groups_label,
                         plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
                         # plt.show()
                         
-                        plt.savefig(cwd+"/feature_importance_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+".png",\
+                        plt.savefig(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
 
            
