@@ -107,6 +107,26 @@ def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo
 
     return (scores_list,df_clasificador_multi)
 
+def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
+    
+    
+    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
+                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1"])
+    scores_list = []
+    model = ml_classifier
+        
+    for i_label, df_combinado in enumerate(df):
+        scores_list.append([])
+        for folds_counter,k_fold in enumerate(k_folds):
+            (scores_clasi, df_clasif) = pipeline_cross_validation(df_combinado,model, ml_classifier_name,\
+                                      df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
+                                      normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
+            df_clasificador_multi = df_clasificador_multi.append(df_clasif)
+            scores_list[i_label].append(scores_clasi)
+                
+
+    return (scores_list,df_clasificador_multi)
+
 def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=False,multi=False,random_seed=None,n_repeats=1):
     
     scores_list = []
@@ -142,7 +162,7 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                             # feature_importance.plot(top_n_features=1)
                             if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
                                 importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
-                            elif algorithm_label[i_algorithm] == "xgboost":
+                            else:
                                 importances_matrix.append(pipe["model"].feature_importances_)
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
