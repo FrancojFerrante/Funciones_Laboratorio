@@ -24,6 +24,7 @@ from sklearn.feature_selection import RFECV
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import GridSearchCV
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -48,7 +49,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
             pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
         else:
             pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
-        
+                        
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
     
@@ -80,6 +81,92 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
    
     return scores,df_resultados
 
+def pipeline_cross_validation_hyper_opt(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
+    
+    # pipe_a = Pipeline(steps=[('imp', SimpleImputer()),
+    #                      ('scale', StandardScaler())])
+    transformers = []
+    pipeline_list = []
+    
+    if data_input | normalization:
+        if data_input:
+            transformers.append(('imputer',KNNImputer()))
+            
+        if normalization:
+            transformers.append(('scaler',MinMaxScaler()))
+        pipe_transformer = Pipeline(steps=transformers)
+        preprocessor = ColumnTransformer(transformers= [('preprocessor',pipe_transformer,features)])
+        pipeline_list.append(('preprocessor',preprocessor))
+        
+    if feature_selection:
+        svm_model = svm.SVC(kernel = "linear",max_iter=100000)
+        if not multi:
+            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
+        else:
+            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
+                        
+            # pipe = Pipeline([('imputer', KNNImputer(n_neighbors=5)),
+            #                 ('scaler', MinMaxScaler()),
+            #                   ('selector', SelectKBest(f_classif, k=5)),
+            #                   ('classifier', LogisticRegression(random_state=0))])
+
+            # search_space = [{'selector__k': [3,5,10]},
+            #                 {'imputer': [KNNImputer()],
+            #                       'imputer__n_neighbors': [3,5,10]},
+            #                 {'classifier': [XGBClassifier(random_state=0,n_estimators=5000,learning_rate=0.01)],
+            #                   'classifier__loss': ["deviance","exponential"],
+            #                   'classifier__learning_rate': [0.001,0.01,0.1,1],
+            #                   'classifier__n_estimators': [100,1000,3000,5000,10000,50000],
+            #                   'classifier__max_depth': [1,3,5,10,20]}]
+
+            # search_space = [{'selector__k': [1, 2, 3, 4,5,6,7,8,9,10,None]},
+            #                 {'imputer': [KNNImputer()],
+            #                      'imputer__n_neighbors': [3,4,5,6,7,8,9,10]},
+            #                 # {'impute__strategy':[KNNImputer(),"mean", "median", "most_frequent"]},
+            #                 {'classifier': [LogisticRegression(random_state=0,max_iter=100000)],
+            #                   'classifier__C': [0.01, 0.1, 1.0]},
+            #                 {'classifier': [svm.SVC(random_state=0,max_iter=100000)],
+            #                   'classifier__kernel': ["linear", "poly", "rbf", "sigmoid", "precomputed"]},
+            #                 {'classifier': [XGBClassifier(random_state=0,n_estimators=5000,learning_rate=0.01)]}]
+
+            # clf = GridSearchCV(pipe, search_space, cv=5, verbose=0,scoring="accuracy",)
+            # clf = clf.fit(df_combinado_ctr_ad[columnas_estadisticas], df_combinado_ctr_ad["Grupo"])
+
+            # clf.best_estimator_
+
+            # clf.best_score_
+            
+    pipeline_list.append(('model',ml_classifier))
+    kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
+    
+    if multi:
+        scoring = {'acc': 'accuracy'}
+    else:
+        scoring = {'acc': 'accuracy',
+                    'prec_micro': 'precision_micro',
+                    'rec_micro': 'recall_micro',
+                    'auc':'roc_auc',
+                    'f1_score':'f1_micro'
+                   }
+    
+    pipeline = Pipeline(pipeline_list)
+
+    # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
+    scores = cross_validate(pipeline, df[features], df[group_column], scoring=scoring,
+                         cv=kf, return_train_score=False,return_estimator=True)
+    
+    scores["classifier"]=classifier_name
+    scores["group"]=group_labels
+    scores["k_fold"]=k_fold
+    if multi:
+        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
+        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc'])]
+    else:
+        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
+        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),np.mean(scores['test_auc']),np.mean(scores['test_f1_score'])]
+   
+    return scores,df_resultados
+    
 def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
     
@@ -162,7 +249,7 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                             # feature_importance.plot(top_n_features=1)
                             if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
                                 importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
-                            else:
+                            elif algorithm_label[i_algorithm] == "xgboost":
                                 importances_matrix.append(pipe["model"].feature_importances_)
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)

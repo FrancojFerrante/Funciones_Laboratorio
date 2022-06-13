@@ -141,7 +141,8 @@ def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grup
     df_acomodado['fluencia'] = df_acomodado['fluencia'].astype(str)
     df_acomodado['Grupo'] = df_acomodado['Grupo'].astype(str)
     df_acomodado['Codigo'] = df_acomodado['Codigo'].astype(str)
-    
+    df_acomodado[feature] = pd.to_numeric(df_acomodado[feature])
+
     resultado = pd.DataFrame(columns = ["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
     if np.all((df_acomodado[feature] == 0)) == True:
         print("Son todos 0 en",feature)
