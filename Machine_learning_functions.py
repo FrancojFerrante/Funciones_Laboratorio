@@ -194,7 +194,7 @@ def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo
 
     return (scores_list,df_clasificador_multi)
 
-def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
+def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,columna_features,columnas_grupo,tipo_columnas,k_folds,path,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
     
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
@@ -210,7 +210,9 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,co
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
             df_clasificador_multi = df_clasificador_multi.append(df_clasif)
             scores_list[i_label].append(scores_clasi)
-                
+    
+    df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+ml_classifier_name+"_"+\
+                                              tipo_columnas+".xlsx")           
 
     return (scores_list,df_clasificador_multi)
 
