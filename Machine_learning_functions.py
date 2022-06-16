@@ -28,6 +28,10 @@ from sklearn.model_selection import GridSearchCV
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
+
+    print("Classifier: " + classifier_name)
+    print("Groups: " + "-".join(group_labels))
+    print("Fold: " + str(k_fold))
     # pipe_a = Pipeline(steps=[('imp', SimpleImputer()),
     #                      ('scale', StandardScaler())])
     transformers = []
@@ -66,8 +70,8 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     pipeline = Pipeline(pipeline_list)
 
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
-    scores = cross_validate(pipeline, df[features], df[group_column], scoring=scoring,
-                         cv=kf, return_train_score=False,return_estimator=True)
+    scores = cross_validate(pipeline, df[features], df[group_column].values.ravel(), scoring=scoring,
+                         cv=kf, return_train_score=False,return_estimator=True,verbose=1,n_jobs=-1)
     
     scores["classifier"]=classifier_name
     scores["group"]=group_labels
@@ -188,7 +192,7 @@ def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo
             (scores_clasi, df_clasif) = pipeline_cross_validation(df_combinado,model, clasificador,\
                                       df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
-            df_clasificador_multi = df_clasificador_multi.append(df_clasif)
+            df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
             scores_list[i_label].append(scores_clasi)
                 
 
@@ -208,7 +212,8 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,co
             (scores_clasi, df_clasif) = pipeline_cross_validation(df_combinado,model, ml_classifier_name,\
                                       df_labels[i_label], columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
-            df_clasificador_multi = df_clasificador_multi.append(df_clasif)
+            df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
+
             scores_list[i_label].append(scores_clasi)
     
     df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+ml_classifier_name+"_"+\
@@ -221,6 +226,9 @@ def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_g
     scores_list = []
     resultados=[]
     
+    print("Base: " + tipo_columnas)
+    print("------------------------")
+
     for clasificador in clasificadores:
         (scores,df_clasificador_multi) = menu_clasificador(clasificador,df,df_labels,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_"+clasificador+"//multi_feature"\
                                                             + tipo_columnas,path+"/feature_importance_"+clasificador+"/multi_feature_"\
@@ -243,23 +251,27 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                 for i_group,group in enumerate(algorithm):
                     for i_fold,fold in enumerate(group):
                         # creating the dataset
-                        num_features_dict = dict()
                         importances_matrix = []
 
                         for i_pipe,pipe in enumerate(fold["estimator"]):
-                            # feature_importance = FeatureImportance(pipe)
-                            # feature_importance.plot(top_n_features=1)
-                            if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
+                            invert_op = hasattr(pipe["model"], "coef_")
+                            if invert_op:
                                 importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
-                            elif algorithm_label[i_algorithm] == "xgboost":
+                            else:
                                 importances_matrix.append(pipe["model"].feature_importances_)
+
+
+                            # if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
+                            #     importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
+                            # elif algorithm_label[i_algorithm] == "xgboost":
+                            #     importances_matrix.append(pipe["model"].feature_importances_)
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
                         data = {'x_values':x_values,'y_values':y_values}
                         df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False).head(n_feature_importance)
                         
-                        fig = plt.figure(figsize = (10, 5))
+                        plt.figure(figsize = (10, 5))
                         plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color ='blue', width = 0.4)
                         plt.xlabel("Base")
                         plt.ylabel("Feature importance")
