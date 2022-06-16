@@ -200,6 +200,8 @@ def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo
 
 def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,columna_features,columnas_grupo,tipo_columnas,k_folds,path,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
+    print("Base: " + tipo_columnas)
+    print("------------------------")
     
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
                                                   "Normalization","Accuracy","Precision","Recall","AUC","F1"])
