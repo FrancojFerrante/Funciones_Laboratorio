@@ -25,6 +25,8 @@ from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import make_scorer
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -57,6 +59,22 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     pipeline_list.append(('model',ml_classifier))
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
     
+    def confusion_matrix_tn(y_true, y_pred):
+        cm = confusion_matrix(y_true, y_pred)
+        return cm[0, 0]
+
+    def confusion_matrix_fp(y_true, y_pred):
+        cm = confusion_matrix(y_true, y_pred)
+        return cm[0, 1]
+
+    def confusion_matrix_fn(y_true, y_pred):
+        cm = confusion_matrix(y_true, y_pred)
+        return cm[1, 0]
+    
+    def confusion_matrix_tp(y_true, y_pred):
+        cm = confusion_matrix(y_true, y_pred)
+        return cm[1, 1]
+    
     if multi:
         scoring = {'acc': 'accuracy'}
     else:
@@ -64,7 +82,11 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
                     'prec_micro': 'precision_micro',
                     'rec_micro': 'recall_micro',
                     'auc':'roc_auc',
-                    'f1_score':'f1_micro'
+                    'f1_score':'f1_micro',
+                    'true_neg':make_scorer(confusion_matrix_tn),
+                    'false_pos':make_scorer(confusion_matrix_fp),
+                    'false_neg':make_scorer(confusion_matrix_fn),
+                    'true_pos':make_scorer(confusion_matrix_tp)
                    }
     
     pipeline = Pipeline(pipeline_list)
@@ -80,8 +102,11 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
         df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc'])]
     else:
-        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1"])
-        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),np.mean(scores['test_auc']),np.mean(scores['test_f1_score'])]
+        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
+        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),\
+                                                 np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),\
+                                                 np.mean(scores['test_auc']),np.mean(scores['test_f1_score']),np.sum(scores['test_true_neg']),\
+                                                 np.sum(scores['test_false_pos']),np.sum(scores['test_false_neg']),np.sum(scores['test_true_pos'])]
    
     return scores,df_resultados
 
@@ -173,9 +198,8 @@ def pipeline_cross_validation_hyper_opt(df,ml_classifier,classifier_name,group_l
     
 def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
-    
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
-                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1"])
+                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
     scores_list = []
     model = None
     
@@ -204,7 +228,7 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,co
     print("------------------------")
     
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
-                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1"])
+                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
     scores_list = []
     model = ml_classifier
         
@@ -244,7 +268,7 @@ def tres_clasificadores(clasificadores,df,df_labels,columnas_features,columnas_g
     return (scores_list,resultados)
 
 # Ploteo feature importance entregado por el clasificador
-def feature_importance_not_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_feature_importance,n_repeats,cwd):
+def feature_importance_not_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_feature_importance,k_folds,n_repeats,cwd,show_figures=False):
         
     for i_base, base in enumerate(scores_list):
         if "feat" not in databases_labels[i_base]:
@@ -272,7 +296,8 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
                         data = {'x_values':x_values,'y_values':y_values}
                         df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False).head(n_feature_importance)
-                        
+                        df_feature_importance.to_excel(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+str(k_folds[i_fold])+"_folds_"+groups_label[i_group]+"_"+str(n_repeats)+".xlsx")
+
                         plt.figure(figsize = (10, 5))
                         plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color ='blue', width = 0.4)
                         plt.xlabel("Base")
@@ -280,11 +305,14 @@ def feature_importance_not_feat_selection(scores_list,databases_labels,groups_la
                         plt.xticks(rotation = 90) # Rotates X-Axis Ticks by 90-degrees
                         plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
 
-                        # plt.show()
-                        plt.savefig(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+"_"+str(n_repeats)+".png",\
+                        plt.savefig(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+str(k_folds[i_fold])+"_folds_"+groups_label[i_group]+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
+                        if show_figures:
+                            plt.show()
+                        else:
+                            plt.close('all')
 
-def feature_importance_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_repeats,cwd):
+def feature_importance_feat_selection(scores_list,databases_labels,groups_label,algorithm_label,n_repeats,cwd,show_figures=False):
     # ploteo la feature importance por cantidad de veces que fue elegida la feature.
 
     for i_base, base in enumerate(scores_list):
@@ -316,11 +344,13 @@ def feature_importance_feat_selection(scores_list,databases_labels,groups_label,
                         plt.ylabel("N° times feature selected")
                         plt.xticks(rotation=90)
                         plt.title(databases_labels[i_base] + " with " + algorithm_label[i_algorithm] + " " + groups_label[i_group])
-                        # plt.show()
                         
                         plt.savefig(cwd+"_"+algorithm_label[i_algorithm]+"/"+databases_labels[i_base]+"_"+groups_label[i_group]+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
-
+                        if show_figures:
+                            plt.show()
+                        else:
+                            plt.close('all')
            
 
 def logistic_regression_cross_validation(df,group_labels,group_column,features,k_fold,random_seed = None,normalization=True,path_confusion_matrix = "", path_excel = "",n_importances=0,path_feature_importance="",data_input=False,feature_selection=0):
