@@ -100,13 +100,12 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     scores["k_fold"]=k_fold
     if multi:
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
-        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),np.mean(scores['test_acc'])]
+        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),scores['test_acc']]
     else:
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
         df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features","-".join(group_labels),classifier_name,str(k_fold),str(normalization),\
-                                                 np.mean(scores['test_acc']),np.mean(scores['test_prec_micro']),np.mean(scores['test_rec_micro']),\
-                                                 np.mean(scores['test_auc']),np.mean(scores['test_f1_score']),np.sum(scores['test_true_neg']),\
-                                                 np.sum(scores['test_false_pos']),np.sum(scores['test_false_neg']),np.sum(scores['test_true_pos'])]
+                                                 scores['test_acc'],scores['test_prec_micro'],scores['test_rec_micro'],scores['test_auc'],scores['test_f1_score'],scores['test_true_neg'],\
+                                                 scores['test_false_pos'],scores['test_false_neg'],scores['test_true_pos']]
    
     return scores,df_resultados
 
@@ -198,8 +197,9 @@ def pipeline_cross_validation_hyper_opt(df,ml_classifier,classifier_name,group_l
     
 def menu_clasificador(clasificador, df,df_labels,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
-    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
-                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
+    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
+
+
     scores_list = []
     model = None
     
@@ -227,8 +227,8 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, df,df_labels,co
     print("Base: " + tipo_columnas)
     print("------------------------")
     
-    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold",\
-                                                  "Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
+    df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
+
     scores_list = []
     model = ml_classifier
         
