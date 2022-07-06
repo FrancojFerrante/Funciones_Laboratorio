@@ -7,14 +7,41 @@ Created on Wed Sep  1 11:53:23 2021
 
 # Graficar.py>
 
-
 import numpy as np
+import pandas as pd
 import matplotlib as plt
 import matplotlib.pyplot as plt
 import plotly.io as pio
 import plotly.express as px
 import plotly.graph_objects as go
+import seaborn as sns
 
+def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre_ejecucion,n_repeats,cwd,show_figures = False):
+    for key_diseases, value_diseases in dict_df.items():
+        fig, axs = plt.subplots(ncols=len(k_folds), figsize=(20,5))
+        if len(k_folds)>1:
+            for k,k_fold in enumerate(k_folds):
+                data_aux = value_diseases[value_diseases["k-fold"] == str(k_fold)]
+                data_plot = pd.DataFrame(columns = ["Feature","Grupo","Clasificador","k-fold","Base",metric])
+                for i_row, row in data_aux.iterrows():
+                    for i_valor, valor in enumerate(row[metric]):
+                        data_plot.loc[len(data_plot)] = [row["Feature"],row["Grupo"],row["Clasificador"],row["k-fold"],row["Base"],valor]
+                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_plot, dodge=True, join=False, height=5, aspect=.8, ax=axs[k])
+                g.set_xticklabels(g.get_xticklabels(),rotation=90)
+                axs[k].set_title(str(k_fold)+ " k-folds")
+        else:
+            data_aux = value_diseases[value_diseases["k-fold"] == str(k_folds[0])]
+            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_aux, height=5, aspect=.8,ax=axs)
+            g.set_xticklabels(g.get_xticklabels(),rotation=90)
+            axs.set_title(str(k_folds[0])+ " k-folds")
+        fig.suptitle(key_diseases) 
+
+        plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_accuracy_points_"+key_diseases+"_"+str(n_repeats)+".png",\
+                    bbox_inches='tight')
+        if show_figures:
+            plt.show()
+        else:
+            plt.close('all')
 
 def plot_multiple_barras_vertical_from_dataframe(df,columnas,labels_x, label_y, label_legend, title,  width, formato=0, padding = 0, fontsize = 8.5, pie_figura = "",fig_text_space = -0.2,rotation = 0,legend_position=0):
 
