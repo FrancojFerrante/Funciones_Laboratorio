@@ -9,6 +9,7 @@ Created on Tue Mar  8 17:43:44 2022
 
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
+
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn import metrics
 import numpy as np 
@@ -101,11 +102,24 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     if multi:
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
         df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels,classifier_name,str(k_fold),str(normalization),scores['test_acc']]
+
     else:
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
-        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels,classifier_name,str(k_fold),str(normalization),\
-                                                 scores['test_acc'],scores['test_prec_micro'],scores['test_rec_micro'],scores['test_auc'],scores['test_f1_score'],scores['test_true_neg'],\
-                                                 scores['test_false_pos'],scores['test_false_neg'],scores['test_true_pos']]
+        df_resultados["Accuracy"] = scores['test_acc']
+        df_resultados["Precision"] = scores['test_prec_micro']
+        df_resultados["Recall"] = scores['test_rec_micro']
+        df_resultados["AUC"] = scores['test_auc']
+        df_resultados["F1"] = scores['test_f1_score']
+        df_resultados["true_neg"] = scores['test_true_neg']
+        df_resultados["false_pos"] = scores['test_false_pos']
+        df_resultados["false_neg"] = scores['test_false_neg']
+        df_resultados["true_pos"] = scores['test_true_pos']
+        df_resultados["Random-Seed"] = random_seed
+        df_resultados["Feature"] = "Multi-features"
+        df_resultados["Grupo"] = group_labels
+        df_resultados["Clasificador"] = classifier_name
+        df_resultados["k-fold"] = str(k_fold)
+        df_resultados["Normalization"] = str(normalization)
    
     return scores,df_resultados
 
@@ -213,11 +227,11 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
           'model__class_weight': [None, "balanced"],
           'model__solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']})
         
-        search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
-          'model__loss': ["deviance","exponential"],
-          'model__learning_rate': [0.001,0.01,0.1,1,2],
-          'model__n_estimators': [100,1000,3000,5000],
-          'model__max_depth': [1,3,5,10,20]})
+        # search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
+        #   'model__loss': ["deviance","exponential"],
+        #   'model__learning_rate': [0.001,0.01,0.1,1,2],
+        #   'model__n_estimators': [100,1000,3000,5000],
+        #   'model__max_depth': [1,3,5,10,20]})
         
         search_space.append({'model': [svm.SVC(max_iter=100000)],
           'model__kernel': ["linear", "poly", "rbf", "sigmoid", "precomputed"],
@@ -328,7 +342,9 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
                                                             + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
     
         df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
-                                                 tipo_columnas+".xlsx")
+                                       tipo_columnas+".xlsx") 
+        # df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
+        #                                          tipo_columnas+".xlsx")
         dict_resultados[clasificador] = df_clasificador_multi
         dict_scores_list[clasificador] = scores
 

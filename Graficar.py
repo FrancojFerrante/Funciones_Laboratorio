@@ -22,11 +22,7 @@ def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre
         if len(k_folds)>1:
             for k,k_fold in enumerate(k_folds):
                 data_aux = value_diseases[value_diseases["k-fold"] == str(k_fold)]
-                data_plot = pd.DataFrame(columns = ["Feature","Grupo","Clasificador","k-fold","Base",metric])
-                for i_row, row in data_aux.iterrows():
-                    for i_valor, valor in enumerate(row[metric]):
-                        data_plot.loc[len(data_plot)] = [row["Feature"],row["Grupo"],row["Clasificador"],row["k-fold"],row["Base"],valor]
-                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_plot, dodge=True, join=False, height=5, aspect=.8, ax=axs[k])
+                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_aux, dodge=True, join=False, height=5, aspect=.8, ax=axs[k])
                 g.set_xticklabels(g.get_xticklabels(),rotation=90)
                 axs[k].set_title(str(k_fold)+ " k-folds")
         else:
@@ -36,7 +32,7 @@ def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre
             axs.set_title(str(k_folds[0])+ " k-folds")
         fig.suptitle(key_diseases) 
 
-        plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_accuracy_points_"+key_diseases+"_"+str(n_repeats)+".png",\
+        plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_"+metric+"_points_"+key_diseases+"_"+str(n_repeats)+".png",\
                     bbox_inches='tight')
         if show_figures:
             plt.show()
