@@ -223,18 +223,16 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
         search_space.append({'model': [LogisticRegression(multi_class='ovr',max_iter=100000,n_jobs=-1)],
           'model__C': [0.01, 0.1, 1.0,2.0],
           'model__penalty': ["none", "l2", "l1","elasticnet"],
-          'model__multi_class': ["ovr", "multinomial"],
           'model__class_weight': [None, "balanced"],
-          'model__solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']})
+          'model__solver': ['newton-cg', 'lbfgs', 'liblinear']})
         
         search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
-          'model__loss': ["deviance","exponential"],
           'model__learning_rate': [0.001,0.01,0.1,1,2],
           'model__n_estimators': [100,1000,3000,5000],
           'model__max_depth': [1,3,5,10,20]})
         
         search_space.append({'model': [svm.SVC(max_iter=100000)],
-          'model__kernel': ["linear", "poly", "rbf", "sigmoid", "precomputed"],
+          'model__kernel': ["linear", "poly", "sigmoid"],
           'model__degree': [2,3,4,5],
           'model__gamma': ["scale", "auto"],
           'model__class_weight': [None, "balanced"]})
