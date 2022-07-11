@@ -227,11 +227,11 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
           'model__class_weight': [None, "balanced"],
           'model__solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']})
         
-        # search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
-        #   'model__loss': ["deviance","exponential"],
-        #   'model__learning_rate': [0.001,0.01,0.1,1,2],
-        #   'model__n_estimators': [100,1000,3000,5000],
-        #   'model__max_depth': [1,3,5,10,20]})
+        search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
+          'model__loss': ["deviance","exponential"],
+          'model__learning_rate': [0.001,0.01,0.1,1,2],
+          'model__n_estimators': [100,1000,3000,5000],
+          'model__max_depth': [1,3,5,10,20]})
         
         search_space.append({'model': [svm.SVC(max_iter=100000)],
           'model__kernel': ["linear", "poly", "rbf", "sigmoid", "precomputed"],
