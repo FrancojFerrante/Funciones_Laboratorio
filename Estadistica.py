@@ -157,7 +157,7 @@ def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grup
         resultado = df_resultado[["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"]]
     return resultado
 
-def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,dfs_no_control,texto_no_control, outlier_condition, path_files="", save_boxplot = True, save_excel_with_outliers = False, save_excel_without_outliers = True):
+def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,dfs_no_control,texto_no_control, outlier_condition, path_files="", save_boxplot = True, save_excel_with_outliers = True, save_excel_without_outliers = True):
     
     resultado_total = pd.DataFrame(columns=["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
     resultado_total_sin_outliers = pd.DataFrame(columns=["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
@@ -196,7 +196,7 @@ def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,d
 
             # Check if save excel with outliers
             if save_excel_with_outliers & (len(resultado[(resultado["p-unc"]<0.05) & (resultado["Source"] == "Interaction")]) > 0):
-                df_combinado = df_controles.append(df_no_control)
+                df_combinado = df_controles[["Codigo","Grupo",col_fonologica,col_semantica]].append(df_no_control[["Codigo","Grupo",col_fonologica,col_semantica]])
                 df_acomodado = pd.melt(df_combinado.reset_index(), id_vars=["Codigo",'Grupo'], value_vars=[col_fonologica, col_semantica])
                 df_acomodado.rename(columns={"variable": "fluencia", "value": "log_frq_promedio"}, inplace=True)
                 df_acomodado.to_csv(path_files+"//databases_with_outliers_interaccion_significativos_single_column/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
