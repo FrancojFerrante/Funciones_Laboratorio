@@ -198,4 +198,20 @@ def roc_curve(df,legends,auc_means,auc_stds,xs,ys,colors,titulo,path,filename,wi
     fig.update_layout(layout)
     # fig.show()
     fig.write_image(path+"//"+filename)
+
+
+def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive', negativeClass = 'Negative', colorNegative= 'White', colorPositive = 'Black',path=None):
+    plt.figure(figsize=(8,6))
+    sns.distplot(scores_o[y_labels_o==0], label=negativeClass,
+                 hist_kws={'edgecolor':'black','color':colorNegative},
+                 kde_kws={"color": "k", "linestyle":'--'}, bins = bins)
+    sns.distplot(scores_o[y_labels_o==1], label=positiveClass, color=colorPositive,
+                 hist_kws={'edgecolor':'black','color':colorPositive},
+                 kde_kws={"color": "k"}, bins = bins)
+    plt.xlabel('Decision scores',fontsize=22)
+    plt.legend(fontsize=15)
+    plt.tick_params(labelsize=20)
+    plt.savefig(path+"distribution.svg")
+    plt.figure(figsize=(8,6))
+    
     

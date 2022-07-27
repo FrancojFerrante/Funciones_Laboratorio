@@ -7,7 +7,6 @@ Created on Tue Mar  8 17:43:44 2022
 
 # Machine_learning_functions.py>
 
-from sklearn.linear_model import LogisticRegression
 import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold, cross_validate
@@ -27,14 +26,17 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import make_scorer
+from sklearn.linear_model import LogisticRegression
+import random
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
-
     print("Classifier: " + classifier_name)
     print("Groups: " + group_labels)
     print("Fold: " + str(k_fold))
 
+    if (random_seed==None):
+        random_seed = random.randint(0,np.iinfo(np.int32).max)
     
     transformers = []
     pipeline_list = []
@@ -60,7 +62,6 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     pipeline = Pipeline(pipeline_list)
 
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
-    
     def confusion_matrix_tn(y_true, y_pred):
         cm = confusion_matrix(y_true, y_pred)
         return cm[0, 0]
@@ -95,6 +96,30 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
     scores = cross_validate(pipeline, df[features], df[group_column].values.ravel(), scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True,verbose=1,n_jobs=-1)
+    df_prob = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","df_index","target","probability"])
+    cant_filas_test = np.sum(scores["test_true_neg"])+np.sum(scores["test_true_pos"])+np.sum(scores["test_false_neg"])+np.sum(scores["test_false_pos"])
+    df_prob["Random-Seed"] = np.full((cant_filas_test,),random_seed)
+    df_prob["Feature"] = "Multi-features"
+    df_prob["Grupo"] = group_labels
+    df_prob["Clasificador"] = classifier_name
+    df_prob["k-fold"] = str(k_fold)
+    df_prob["Normalization"] = str(normalization)
+    kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
+    i = 0
+    llenado=0
+    for train_index, test_index in kf.split(df[features], df[group_column].values.ravel()):
+        resultado = scores["estimator"][i].predict_proba(df[features].iloc[test_index])
+        target = df.iloc[test_index][group_column]
+        df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
+        df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado[:,1]
+        df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
+        llenado = llenado+len(resultado)
+        
+        i=i+1
+        # X_train, X_test = X[train_index], X[test_index]
+        # y_train, y_test = y[train_index], y[test_index]
+
+    
     
     scores["classifier"]=classifier_name
     scores["group"]=group_labels
@@ -121,7 +146,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         df_resultados["k-fold"] = str(k_fold)
         df_resultados["Normalization"] = str(normalization)
    
-    return scores,df_resultados
+    return scores,df_resultados,df_prob
 
 def pipeline_personalizado_cross_validation(df,pipeline,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -220,7 +245,7 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
         pipe = Pipeline(pipeline_list)
         # print(check_params_exist(pipe, 'imputer'))
 
-        search_space.append({'model': [LogisticRegression(multi_class='ovr',max_iter=100000,n_jobs=-1)],
+        search_space.append({'model': [LogisticRegression(multi_class='ovr',max_iter=100000)],
           'model__C': [0.01, 0.1, 1.0,2.0],
           'model__penalty': ["none", "l2", "l1","elasticnet"],
           'model__class_weight': [None, "balanced"],
@@ -256,26 +281,30 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
 
 
     scores_dict = {}
+    prob_dict = {}
+
     model = None
     
     if clasificador == "regresion_logistica":
         model = LogisticRegression(max_iter=100000,)
     elif clasificador == "svm":
-        model = svm.SVC(kernel = "linear",max_iter=100000)
+        model = svm.SVC(kernel = "linear",max_iter=100000,probability=True)
     elif clasificador == "xgboost":
         model = XGBClassifier()
         
     for key, value in dict_df.items():
         scores_dict[key] = []
+        prob_dict[key] = {}
         for folds_counter,k_fold in enumerate(k_folds):
-            (scores_clasi, df_clasif) = pipeline_cross_validation(value,model, clasificador,\
+            (scores_clasi, df_clasif,df_prob) = pipeline_cross_validation(value,model, clasificador,\
                                       key, columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
             df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
             scores_dict[key].append(scores_clasi)
+            prob_dict[key][k_fold] = df_prob
                 
 
-    return (scores_dict,df_clasificador_multi)
+    return (scores_dict,df_clasificador_multi,prob_dict)
 
 def clasificador_personalizado(ml_classifier,ml_classifier_name, dict_df,columna_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
@@ -285,22 +314,28 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, dict_df,columna
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
 
     scores_dict = {}
+    prob_dict = {}
+
     model = ml_classifier
         
     for key, value in dict_df.items():
         scores_dict[key] = []
+        prob_dict[key] = {}
         for folds_counter,k_fold in enumerate(k_folds):
-            (scores_clasi, df_clasif) = pipeline_cross_validation(value,model, ml_classifier_name,\
+            (scores_clasi, df_clasif,df_prob) = pipeline_cross_validation(value,model, ml_classifier_name,\
                                       key, columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
             df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
 
             scores_dict[key].append(scores_clasi)
-    
+            prob_dict[key][k_fold] = df_prob
+            df_prob.to_excel(path+"/resultados_machine_learning/probs_"+key+"_"+str(k_fold)+"_"+ml_classifier_name+"_"+\
+                                                      tipo_columnas+".xlsx")    
     df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+ml_classifier_name+"_"+\
-                                              tipo_columnas+".xlsx")           
+                                              tipo_columnas+".xlsx")    
+    
 
-    return (scores_dict,df_clasificador_multi)
+    return (scores_dict,df_clasificador_multi,prob_dict)
 
 def pipeline_personalizado(pipeline,ml_classifier_name, df,df_labels,columna_features,columnas_grupo,tipo_columnas,k_folds,path,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
@@ -330,12 +365,13 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
     
     dict_scores_list = {}
     dict_resultados = {}
-    
+    dict_prob = {}
+
     print("Base: " + tipo_columnas)
     print("------------------------")
 
     for clasificador in clasificadores:
-        (scores,df_clasificador_multi) = menu_clasificador(clasificador,dict_df,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_"+clasificador+"//multi_feature"\
+        (scores,df_clasificador_multi,df_prob) = menu_clasificador(clasificador,dict_df,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_"+clasificador+"//multi_feature"\
                                                             + tipo_columnas,path+"/feature_importance_"+clasificador+"/multi_feature_"\
                                                             + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
     
@@ -345,8 +381,9 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
         #                                          tipo_columnas+".xlsx")
         dict_resultados[clasificador] = df_clasificador_multi
         dict_scores_list[clasificador] = scores
+        dict_prob[clasificador] = df_prob
 
-    return (dict_scores_list,dict_resultados)
+    return (dict_scores_list,dict_resultados,dict_prob)
 
 # Ploteo feature importance entregado por el clasificador
 def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_folds,n_repeats,cwd,show_figures=False):
