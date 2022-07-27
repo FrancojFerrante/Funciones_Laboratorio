@@ -208,15 +208,6 @@ def pipeline_personalizado_cross_validation(df,pipeline,classifier_name,group_la
 
 def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=None,search_space=None,random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
-    def check_params_exist(esitmator, params_keyword):
-        all_params = esitmator.get_params().keys()
-        available_params = [x for x in all_params if params_keyword in x]
-        if len(available_params)==0:
-            return "No matching params found!"
-        else:
-            return available_params
-    
-    
     print("Hiperparameter optimization")
     if search_space == None:
         
