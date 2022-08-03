@@ -266,7 +266,7 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
    
     return clf.best_params_["model"]
     
-def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_folds,path_confusion_matrix,path_feature_importance,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
+def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_folds,path,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
     
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
 
@@ -288,11 +288,13 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
         prob_dict[key] = {}
         for folds_counter,k_fold in enumerate(k_folds):
             (scores_clasi, df_clasif,df_prob) = pipeline_cross_validation(value,model, clasificador,\
-                                      key, columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
+                                      key, columnas_grupo, list(columna_features.values())[0], k_fold,random_seed = random_seed,\
                                       normalization=True, data_input = data_input,feature_selection=feature_selection,multi=multi,n_repeats=n_repeats)
             df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
             scores_dict[key].append(scores_clasi)
             prob_dict[key][k_fold] = df_prob
+            df_prob.to_excel(path+"/resultados_machine_learning/probs_"+key+"_"+str(k_fold)+"_"+clasificador+"_"+\
+                                                      list(columna_features.keys())[0]+"_"+str(n_repeats)+".xlsx") 
                 
 
     return (scores_dict,df_clasificador_multi,prob_dict)
@@ -362,12 +364,11 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
     print("------------------------")
 
     for clasificador in clasificadores:
-        (scores,df_clasificador_multi,df_prob) = menu_clasificador(clasificador,dict_df,columnas_features,columnas_grupo,k_folds,path + "//imagenes_matriz_confusion_"+clasificador+"//multi_feature"\
-                                                            + tipo_columnas,path+"/feature_importance_"+clasificador+"/multi_feature_"\
-                                                            + tipo_columnas+"_", data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
+        (scores,df_clasificador_multi,df_prob) = menu_clasificador(clasificador,dict_df,columnas_features,columnas_grupo,k_folds,path,\
+                                                                   data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
     
         df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
-                                       tipo_columnas+".xlsx") 
+                                       list(columnas_features.keys())[0]+".xlsx") 
         # df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
         #                                          tipo_columnas+".xlsx")
         dict_resultados[clasificador] = df_clasificador_multi
