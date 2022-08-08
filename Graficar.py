@@ -15,6 +15,7 @@ import plotly.io as pio
 import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
+from matplotlib.ticker import FormatStrFormatter
 
 def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre_ejecucion,n_repeats,cwd,show_figures = False):
     for key_diseases, value_diseases in dict_df.items():
@@ -202,15 +203,37 @@ def roc_curve(df,legends,auc_means,auc_stds,xs,ys,colors,titulo,path,filename,wi
 
 def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive', negativeClass = 'Negative', colorNegative= 'White', colorPositive = 'Black',path=None):
     plt.figure(figsize=(8,6))
-    sns.distplot(scores_o[y_labels_o==0], label=negativeClass,
+    
+    # formato para los labels
+    font_axis_labels = {'family': 'arial',
+        'color':  'black',
+        'weight': 'bold',
+        'size': 32,
+        }
+
+    # barras y líneas de la clase negativa
+    ax1 = sns.distplot(scores_o[y_labels_o==0], label=negativeClass,
                  hist_kws={'edgecolor':'black','color':colorNegative},
-                 kde_kws={"color": "k", "linestyle":'--'}, bins = bins)
+                 kde_kws={"color": colorNegative, "linestyle":'--'}, bins = bins)
+    # barras y líneas de la clase positiva
     sns.distplot(scores_o[y_labels_o==1], label=positiveClass, color=colorPositive,
                  hist_kws={'edgecolor':'black','color':colorPositive},
-                 kde_kws={"color": "k"}, bins = bins)
-    plt.xlabel('Decision scores',fontsize=22)
+                 kde_kws={"color": colorPositive}, bins = bins)
+    
+    plt.xlabel('Decision scores', fontdict=font_axis_labels)
+    plt.ylabel('Density',fontsize=32, fontdict=font_axis_labels)
     plt.legend(fontsize=15)
-    plt.tick_params(labelsize=20)
+    plt.setp(ax1.get_legend().get_texts(), fontname='arial',fontweight="bold") 
+
+    # Pongo en negrita los ticks
+    for element in ax1.get_xticklabels():
+        element.set_fontweight("bold")
+    for element in ax1.get_yticklabels():
+        element.set_fontweight("bold")
+    plt.xticks(fontsize=20,fontname = "arial")
+    plt.yticks(fontsize=20,fontname = "arial")
+    ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.savefig(path+"distribution.svg")
     plt.figure(figsize=(8,6))
     
