@@ -23,12 +23,12 @@ def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre
         if len(k_folds)>1:
             for k,k_fold in enumerate(k_folds):
                 data_aux = value_diseases[value_diseases["k-fold"] == str(k_fold)]
-                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_aux, dodge=True, join=False, height=5, aspect=.8, ax=axs[k])
+                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",col="k-fold",data=data_aux, dodge=True, join=True, height=5, aspect=.8, ax=axs[k])
                 g.set_xticklabels(g.get_xticklabels(),rotation=90)
                 axs[k].set_title(str(k_fold)+ " k-folds")
         else:
             data_aux = value_diseases[value_diseases["k-fold"] == str(k_folds[0])]
-            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",col="k-fold",data=data_aux, height=5, aspect=.8,ax=axs)
+            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",col="k-fold",data=data_aux, height=5, aspect=.8,ax=axs)
             g.set_xticklabels(g.get_xticklabels(),rotation=90)
             axs.set_title(str(k_folds[0])+ " k-folds")
         fig.suptitle(key_diseases) 
@@ -202,7 +202,7 @@ def roc_curve(df,legends,auc_means,auc_stds,xs,ys,colors,titulo,path,filename,wi
 
 
 def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive', negativeClass = 'Negative', colorNegative= 'White', colorPositive = 'Black',path=None):
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(9.5,7.5))
     
     # formato para los labels
     font_axis_labels = {'family': 'arial',
@@ -235,6 +235,6 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
     ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.savefig(path+"distribution.svg")
-    plt.figure(figsize=(8,6))
+    plt.figure(figsize=(9.5,7.5))
     
     
