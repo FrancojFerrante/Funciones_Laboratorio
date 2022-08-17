@@ -78,18 +78,22 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         cm = confusion_matrix(y_true, y_pred)
         return cm[1, 1]
     
+    def return_prob(y_true,y_pred):
+        return y_pred
     if multi:
         scoring = {'acc': 'accuracy'}
     else:
-        scoring = {'acc': 'accuracy',
-                    'prec_micro': 'precision',
-                    'rec_micro': 'recall',
-                    'auc':'roc_auc',
-                    'f1_score':'f1',
-                    'true_neg':make_scorer(confusion_matrix_tn),
-                    'false_pos':make_scorer(confusion_matrix_fp),
-                    'false_neg':make_scorer(confusion_matrix_fn),
-                    'true_pos':make_scorer(confusion_matrix_tp)
+        scoring = {
+            # 'acc': 'accuracy',
+            #         'prec_micro': 'precision',
+            #         'rec_micro': 'recall',
+            #         'auc':'roc_auc',
+            #         'f1_score':'f1',
+            #         'true_neg':make_scorer(confusion_matrix_tn),
+            #         'false_pos':make_scorer(confusion_matrix_fp),
+            #         'false_neg':make_scorer(confusion_matrix_fn),
+            #         'true_pos':make_scorer(confusion_matrix_tp)
+            'prob':make_scorer(return_prob,needs_proba=True)
                    }
     
 
