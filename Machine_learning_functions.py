@@ -84,16 +84,16 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         scoring = {'acc': 'accuracy'}
     else:
         scoring = {
-            # 'acc': 'accuracy',
-            #         'prec_micro': 'precision',
-            #         'rec_micro': 'recall',
-            #         'auc':'roc_auc',
-            #         'f1_score':'f1',
-            #         'true_neg':make_scorer(confusion_matrix_tn),
-            #         'false_pos':make_scorer(confusion_matrix_fp),
-            #         'false_neg':make_scorer(confusion_matrix_fn),
-            #         'true_pos':make_scorer(confusion_matrix_tp)
-            'prob':make_scorer(return_prob,needs_proba=True)
+             'acc': 'accuracy',
+                     'prec_micro': 'precision',
+                     'rec_micro': 'recall',
+                     'auc':'roc_auc',
+                     'f1_score':'f1',
+                     'true_neg':make_scorer(confusion_matrix_tn),
+                     'false_pos':make_scorer(confusion_matrix_fp),
+                     'false_neg':make_scorer(confusion_matrix_fn),
+                     'true_pos':make_scorer(confusion_matrix_tp)
+            #'prob':make_scorer(return_prob,needs_proba=True)   
                    }
     
 
