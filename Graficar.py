@@ -201,8 +201,8 @@ def roc_curve(df,legends,auc_means,auc_stds,xs,ys,colors,titulo,path,filename,wi
     fig.write_image(path+"//"+filename)
 
 
-def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive', negativeClass = 'Negative', colorNegative= 'White', colorPositive = 'Black',path=None):
-    plt.figure(figsize=(9.5,7.5))
+def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive', negativeClass = 'Negative', colorNegative= 'White', colorPositive = 'Black',path=None, width = 9.5, height = 7.5):
+    plt.figure(figsize=(width,height))
     
     # formato para los labels
     font_axis_labels = {'family': 'arial',
@@ -235,6 +235,6 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
     ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.savefig(path+"distribution.svg")
-    plt.figure(figsize=(9.5,7.5))
+    plt.figure(figsize=(width,height))
     
     
