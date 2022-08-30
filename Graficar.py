@@ -217,7 +217,7 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
                  kde_kws={"color": colorNegative, "linestyle":'--'}, bins = bins)
     # barras y líneas de la clase positiva
     sns.distplot(scores_o[y_labels_o==1], label=positiveClass, color=colorPositive,
-                 hist_kws={'edgecolor':'black','color':colorPositive},
+                 hist_kws={'edgecolor':'black','color':colorPositive, "alpha": 0.7},
                  kde_kws={"color": colorPositive}, bins = bins)
     
     plt.xlabel('Decision scores', fontdict=font_axis_labels)
