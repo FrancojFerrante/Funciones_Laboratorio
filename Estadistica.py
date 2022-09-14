@@ -105,7 +105,7 @@ def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grup
     Parameters
     ----------
     resultado : pandas.DataFrame
-        Dataframe with columns ["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"].
+        Dataframe with columns ["Grupo","Prueba","Source","SS","DF1","DF2","MS","F","p-unc","np2","n_ctr","n_no_ctr"].
     df_controles : pandas.DataFrame
         df con los datos de los controles.
     df_no_controles : pandas.DataFrame
@@ -143,7 +143,7 @@ def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grup
     df_acomodado['Codigo'] = df_acomodado['Codigo'].astype(str)
     df_acomodado[feature] = pd.to_numeric(df_acomodado[feature])
 
-    resultado = pd.DataFrame(columns = ["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
+    resultado = pd.DataFrame(columns = ["Grupo","Prueba","Source","SS","DF1","DF2","MS","F","p-unc","np2","n_ctr","n_no_ctr"])
     if np.all((df_acomodado[feature] == 0)) == True:
         print("Son todos 0 en",feature)
     else:
@@ -154,13 +154,13 @@ def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grup
         df_resultado.insert(loc=0, column='Grupo', value=new_col)
         df_resultado["n_ctr"] = len(df_ctr_features)
         df_resultado["n_no_ctr"] = len(df_no_ctr_features)
-        resultado = df_resultado[["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"]]
+        resultado = df_resultado[["Grupo","Prueba","Source","SS","DF1","DF2","MS","F","p-unc","np2","n_ctr","n_no_ctr"]]
     return resultado
 
 def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,dfs_no_control,texto_no_control, outlier_condition, path_files="", save_boxplot = True, save_excel_with_outliers = True, save_excel_without_outliers = True):
     
-    resultado_total = pd.DataFrame(columns=["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
-    resultado_total_sin_outliers = pd.DataFrame(columns=["Grupo","Prueba","Source","p-unc","np2","n_ctr","n_no_ctr"])
+    resultado_total = pd.DataFrame(columns=["Grupo","Prueba","Source","SS","DF1","DF2","MS","F","p-unc","np2","n_ctr","n_no_ctr"])
+    resultado_total_sin_outliers = pd.DataFrame(columns=["Grupo","Prueba","Source","SS","DF1","DF2","MS","F","p-unc","np2","n_ctr","n_no_ctr"])
     
     for columna in columnas:
         print(columna)
@@ -194,9 +194,11 @@ def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,d
                                    col_fonologica,col_semantica,texto_no_control[i_no_control])
             resultado_total_sin_outliers = resultado_total_sin_outliers.append(resultado_sin_outliers)
 
+            df_combinado = df_controles[["Codigo","Grupo",col_fonologica,col_semantica]].append(df_no_control[["Codigo","Grupo",col_fonologica,col_semantica]])
+            df_combinado.to_csv(path_files+"//features_with_outliers/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
+
             # Check if save excel with outliers
             if save_excel_with_outliers & (len(resultado[(resultado["p-unc"]<0.05) & (resultado["Source"] == "Interaction")]) > 0):
-                df_combinado = df_controles[["Codigo","Grupo",col_fonologica,col_semantica]].append(df_no_control[["Codigo","Grupo",col_fonologica,col_semantica]])
                 df_acomodado = pd.melt(df_combinado.reset_index(), id_vars=["Codigo",'Grupo'], value_vars=[col_fonologica, col_semantica])
                 df_acomodado.rename(columns={"variable": "fluencia", "value": "log_frq_promedio"}, inplace=True)
                 df_acomodado.to_csv(path_files+"//databases_with_outliers_interaccion_significativos_single_column/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
