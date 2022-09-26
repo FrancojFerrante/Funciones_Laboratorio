@@ -204,9 +204,9 @@ def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,d
             if save_excel_with_outliers & (len(resultado[(resultado["p-unc"]<0.05) & (resultado["Source"] == "Interaction")]) > 0):
                 df_acomodado = pd.melt(df_combinado.reset_index(), id_vars=["Codigo",'Grupo'], value_vars=[col_fonologica, col_semantica])                
                 aux_nombre = col_fonologica.split("_")
-                df_acomodado.rename(columns={"variable": "fluencia", "value": aux_nombre[0]+"_"+aux_nombre[2:]}, inplace=True)
+                df_acomodado.rename(columns={"variable": "fluencia", "value": aux_nombre[0]+"_"+"_".join(aux_nombre[2:])}, inplace=True)
                 
-                df_acomodado.pairwise_tukey(dv='body_mass_g', between='species').round(3)
+                # df_acomodado.pairwise_tukey(dv='body_mass_g', between='species').round(3)
 
                 df_acomodado.to_csv(path_files+"//databases_with_outliers_interaccion_significativos_single_column/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
                 df_combinado.to_csv(path_files+"//databases_with_outliers_interaccion_significativos/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
@@ -216,7 +216,7 @@ def anova_mixto_2x2_con_y_sin_outliers(columnas,prueba_1,prueba_2,df_controles,d
                 df_combinado = df_ctr_sin_outliers.append(df_no_control_sin_outliers)
                 df_acomodado = pd.melt(df_combinado.reset_index(), id_vars=["Codigo",'Grupo'], value_vars=[col_fonologica, col_semantica])
                 aux_nombre = col_fonologica.split("_")
-                df_acomodado.rename(columns={"variable": "fluencia", "value": aux_nombre[0]+"_"+aux_nombre[2:]}, inplace=True)
+                df_acomodado.rename(columns={"variable": "fluencia", "value": aux_nombre[0]+"_"+"_".join(aux_nombre[2:])}, inplace=True)
                 df_acomodado.to_csv(path_files+"//databases_without_outliers_interaccion_significativos_single_column/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
                 df_combinado.to_csv(path_files+"//databases_without_outliers_interaccion_significativos/" + columna+"_CTR-"+texto_no_control[i_no_control]+".csv")
 
