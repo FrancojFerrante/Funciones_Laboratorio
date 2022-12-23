@@ -20,6 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.impute import KNNImputer
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.feature_selection import RFECV
+from sklearn.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -41,6 +42,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     transformers = []
     pipeline_list = []
     
+    # Si hay imputación o normalización
     if data_input | normalization:
         if data_input:
             transformers.append(('imputer',KNNImputer()))
@@ -51,17 +53,29 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         preprocessor = ColumnTransformer(transformers= [('preprocessor',pipe_transformer,features)])
         pipeline_list.append(('preprocessor',preprocessor))
         
+    # Si hay feature selection
     if feature_selection:
         svm_model = svm.SVC(kernel = "linear",max_iter=100000)
         if not multi:
-            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
+            pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
+                                                 direction="forward",n_jobs=-1,scoring='roc_auc')))
         else:
-            pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
+            pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
+                                                 direction="forward",n_jobs=-1,scoring='accuracy')))
+        
+        #if not multi:
+        #    pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc'))) # Ver si reemplazar por forward
+        #else:
+        #    pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
                         
+    # genero el pipeline
     pipeline_list.append(('model',ml_classifier))
     pipeline = Pipeline(pipeline_list)
 
+    # Instancio para generar los folds de cv
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
+    
+    # Funciones propias para contar con la información para armar las matrices de confusión
     def confusion_matrix_tn(y_true, y_pred):
         cm = confusion_matrix(y_true, y_pred)
         return cm[0, 0]
@@ -80,6 +94,8 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     
     def return_prob(y_true,y_pred):
         return y_pred
+    
+    # Armo las métricas
     if multi:
         scoring = {'acc': 'accuracy'}
     else:
@@ -100,7 +116,11 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
     scores = cross_validate(pipeline, df[features], df[group_column].values.ravel(), scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True,verbose=1,n_jobs=-1)
+    
+    # Armo el DataFrame con los resultados
     df_prob = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","df_index","target","probability"])
+    
+    # La cantidad de filas es igual a todas las predicciones que se hicieron (para cada sujeto, en distintas combinaciones de folds)
     cant_filas_test = np.sum(scores["test_true_neg"])+np.sum(scores["test_true_pos"])+np.sum(scores["test_false_neg"])+np.sum(scores["test_false_pos"])
     df_prob["Random-Seed"] = np.full((cant_filas_test,),random_seed)
     df_prob["Feature"] = "Multi-features"
@@ -108,6 +128,19 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     df_prob["Clasificador"] = classifier_name
     df_prob["k-fold"] = str(k_fold)
     df_prob["Normalization"] = str(normalization)
+    
+    
+    # Armo el DataFrame de feature importance para devolverlo
+    #df_features_importances = pd.DataFrame(columns=[["estimator"]+features])
+    #for idx,estimator in enumerate(scores['estimator']):
+        
+    #    list_feature_importance = [idx] + list(np.abs(estimator["model"].coef_[0]))
+    #    df_features_importances.loc[len(df_features_importances)] = list_feature_importance        
+          
+
+    # Genero la misma estructura de folds para obtener las probabilidades de predicción de los modelos ajustados anteriormente.
+    # Esto lo hice así porque, en el momento en que lo codifiqué, sklearn no tenía forma de utilizar cross_validate y a la vez
+    # obtener los scores de probabilidad. (Quise usar cross_validate para poder correrlo 1000 iteraciones paralelizando)
     kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
     i = 0
     llenado=0
@@ -266,14 +299,13 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
    
     return clf.best_params_["model"]
     
-def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_folds,path,data_input=False,feature_selection=0,multi=False, random_seed = None,n_repeats=1):
+def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_folds,path,data_input=False,feature_selection=False,multi=False, random_seed = None,n_repeats=1):
     
     df_clasificador_multi = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
 
 
     scores_dict = {}
     prob_dict = {}
-
     model = None
     
     if clasificador == "regresion_logistica":
@@ -286,6 +318,7 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
     for key, value in dict_df.items():
         scores_dict[key] = []
         prob_dict[key] = {}
+
         for folds_counter,k_fold in enumerate(k_folds):
             (scores_clasi, df_clasif,df_prob) = pipeline_cross_validation(value,model, clasificador,\
                                       key, columnas_grupo, list(columna_features.values())[0], k_fold,random_seed = random_seed,\
@@ -293,6 +326,7 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
             df_clasificador_multi = pd.concat([df_clasificador_multi, df_clasif])
             scores_dict[key].append(scores_clasi)
             prob_dict[key][k_fold] = df_prob
+
             df_prob.to_excel(path+"/resultados_machine_learning/probs_"+key+"_"+str(k_fold)+"_"+clasificador+"_"+\
                                                       list(columna_features.keys())[0]+"_"+str(n_repeats)+".xlsx") 
                 
@@ -314,6 +348,7 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, dict_df,columna
     for key, value in dict_df.items():
         scores_dict[key] = []
         prob_dict[key] = {}
+
         for folds_counter,k_fold in enumerate(k_folds):
             (scores_clasi, df_clasif,df_prob) = pipeline_cross_validation(value,model, ml_classifier_name,\
                                       key, columnas_grupo, columna_features, k_fold,random_seed = random_seed,\
@@ -322,6 +357,7 @@ def clasificador_personalizado(ml_classifier,ml_classifier_name, dict_df,columna
 
             scores_dict[key].append(scores_clasi)
             prob_dict[key][k_fold] = df_prob
+
             df_prob.to_excel(path+"/resultados_machine_learning/probs_"+key+"_"+str(k_fold)+"_"+ml_classifier_name+"_"+\
                                                       tipo_columnas+".xlsx")    
     df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+ml_classifier_name+"_"+\
@@ -377,7 +413,7 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
 
     return (dict_scores_list,dict_resultados,dict_prob)
 
-# Ploteo feature importance entregado por el clasificador
+# Ploteo feature importance entregado por el clasificador. Promedio la importanced de todos y después me quedo con los primeros n_feature_importance
 def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_folds,n_repeats,cwd,show_figures=False):
         
     for key_features, value_features in dict_df_scores.items():
@@ -389,7 +425,6 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                         importances_matrix = []
 
                         for i_pipe,pipe in enumerate(fold["estimator"]):
-                            invert_op = hasattr(pipe["model"], "coef_")
                             if hasattr(pipe["model"], "coef_"):
                                 importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
                             elif hasattr(pipe["model"], "feature_importances_"):
@@ -428,7 +463,7 @@ def feature_importance_feat_selection(dict_df_scores,algorithm_label,n_repeats,c
     # ploteo la feature importance por cantidad de veces que fue elegida la feature.
 
     for key_features, value_features in dict_df_scores.items():
-        if "feat_sel" in key_features:
+       if "feat_sel" in key_features:
             for key_algorithm, value_algorithm in value_features.items():
                 for key_group,value_group in value_algorithm.items():
                     for i_fold,fold in enumerate(value_group):
@@ -446,7 +481,7 @@ def feature_importance_feat_selection(dict_df_scores,algorithm_label,n_repeats,c
                         courses = list(num_features_dict.keys())
                         values = list(num_features_dict.values())
                         
-                        fig = plt.figure(figsize = (10, 5))
+                        plt.figure(figsize = (10, 5))
             
                         # creating the bar plot
                         plt.bar(courses, values, color ='blue',
