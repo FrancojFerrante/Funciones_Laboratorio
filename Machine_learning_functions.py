@@ -442,9 +442,10 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
                         data = {'x_values':x_values,'y_values':y_values}
-                        df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False).head(n_feature_importance)
+                        df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False)
                         df_feature_importance.to_excel(cwd+"_"+key_algorithm+"/"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats)+".xlsx")
-
+                        df_feature_importance = df_feature_importance.head(n_feature_importance) # Me quedo con las n_feature_importance filas para el gráfico
+                        
                         plt.figure(figsize = (10, 5))
                         plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color ='blue', width = 0.4)
                         plt.xlabel("Base")
