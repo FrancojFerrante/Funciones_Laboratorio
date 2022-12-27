@@ -8,7 +8,6 @@ Created on Tue Mar  8 17:43:44 2022
 # Machine_learning_functions.py>
 
 import pandas as pd
-
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn import metrics
 import numpy as np 
@@ -440,21 +439,98 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                             #     importances_matrix.append(pipe["model"].feature_importances_)
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
+                        
+                        # codigo para que tome la cantidad de veces que aparece en el top15 en lugar de tomar el promedio
+                        # importances_matrix_max = []
+                        # for fila in importances_matrix:
+                        #     ind = np.argpartition(fila[0], -15)[-15:]
+                        #     a_agregar = [1 if i in ind else 0 for i in range(len(fila[0]))]
+                        #     importances_matrix_max.append(a_agregar)
+                        
+                        # y_values = np.sum(np.vstack(importances_matrix_max),axis=0)
+
+
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
+                        x_values = list(map(lambda x: x.replace('_p_', '_phonemic_'), x_values))
+                        x_values = list(map(lambda x: x.replace('_animals_', '_semantic_'), x_values))
+                        x_values = list(map(lambda x: x.replace('log_frq', 'frequency'), x_values))
+                        x_values = list(map(lambda x: x.replace('sa_num_phon', 'length'), x_values))
+                        x_values = list(map(lambda x: x.replace('sa_NP', 'neighbors'), x_values))
+                        x_values = list(map(lambda x: x.replace('granularidad_filtrada', 'granularity'), x_values))
+
+
+                        for i_elemento in range(len(x_values)):
+                            separado = x_values[i_elemento].split("_")
+                            x_values[i_elemento] = separado[1] + " " + separado[4] + " " + separado[5]
                         data = {'x_values':x_values,'y_values':y_values}
+                        
+
+                                
                         df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False)
                         df_feature_importance.to_excel(cwd+"_"+key_algorithm+"/"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats)+".xlsx")
+                        
+                        data["color"] = ""
+                        for i_row,row in df_feature_importance.iterrows():
+                            if "frequency" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f79c94"
+                            elif "length" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f75348"
+                            elif "neighbors" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f76457"
+                            elif "granularity" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f72b19"
+                            elif "familiarity" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f79992"
+                            elif "imageability" in row["x_values"]:
+                                df_feature_importance.at[i_row,"color"] = "#f7d5d2"
+                        # Codigo para sumar todos los puntajes aportados por cada dimensión de cada feature
+                        # suma_granularidad = 0
+                        # suma_imaginabilidad = 0
+                        # suma_vecinos = 0
+                        # suma_frecuencia = 0
+                        # suma_longitud = 0
+                        # suma_familiaridad = 0
+                        # for i_row, row in df_feature_importance.iterrows():
+                        #     if "granularidad" in row["x_values"]:
+                        #         suma_granularidad+=row["y_values"]
+                        #     elif "imageability" in row["x_values"]:
+                        #         suma_imaginabilidad+=row["y_values"]
+                        #     elif "sa_NP" in row["x_values"]:
+                        #         suma_vecinos+=row["y_values"]
+                        #     elif "log_frq" in row["x_values"]:
+                        #         suma_frecuencia+=row["y_values"]
+                        #     elif "num_phon" in row["x_values"]:
+                        #         suma_longitud+=row["y_values"]
+                        #     elif "familiarity" in row["x_values"]:
+                        #         suma_familiaridad+=row["y_values"]
                         df_feature_importance = df_feature_importance.head(n_feature_importance) # Me quedo con las n_feature_importance filas para el gráfico
                         
+                        
+                        # fig, axs = plt.subplots(figsize=(20,5))
+                        # g = sns.pointplot(x="x_values", y="y_values",ci="sd",data=df_feature_importance, height=5, aspect=.8,ax=axs)
+                        # g.set_xticklabels(g.get_xticklabels(),rotation=90)
+                        # plt.show()
+                        # fig.suptitle(key_diseases) 
+                        
+                        # plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_"+metric+"_points_"+key_diseases+"_"+str(n_repeats)+".png",\
+                        #             bbox_inches='tight')
+                        # if show_figures:
+                        #     plt.show()
+                        # else:
+                        #     plt.close('all')
+                        
+                        
+                        
                         plt.figure(figsize = (10, 5))
-                        plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color ='blue', width = 0.4)
-                        plt.xlabel("Base")
-                        plt.ylabel("Feature importance")
-                        plt.xticks(rotation = 90) # Rotates X-Axis Ticks by 90-degrees
+                        plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], color =df_feature_importance["color"], width = 0.4)
+                        plt.xlabel("Feature")
+                        plt.ylabel("Coefficient score")
+                        plt.xticks(rotation = 75) # Rotates X-Axis Ticks by 90-degrees
                         plt.title(key_features + " with " + key_algorithm + " " + key_group)
 
                         plt.savefig(cwd+"_"+key_algorithm+"/"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
+                        plt.show()
                         if show_figures:
                             plt.show()
                         else:
