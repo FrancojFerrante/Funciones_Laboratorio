@@ -23,12 +23,12 @@ def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre
         if len(k_folds)>1:
             for k,k_fold in enumerate(k_folds):
                 data_aux = value_diseases[value_diseases["k-fold"] == str(k_fold)]
-                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",col="k-fold",data=data_aux, dodge=True, join=True, height=5, aspect=.8, ax=axs[k])
+                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",color="k-fold",data=data_aux, dodge=True, join=True, ax=axs[k])
                 g.set_xticklabels(g.get_xticklabels(),rotation=90)
                 axs[k].set_title(str(k_fold)+ " k-folds")
         else:
             data_aux = value_diseases[value_diseases["k-fold"] == str(k_folds[0])]
-            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",col="k-fold",data=data_aux, height=5, aspect=.8,ax=axs)
+            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",color="k-fold",data=data_aux, ax=axs)
             g.set_xticklabels(g.get_xticklabels(),rotation=90)
             axs.set_title(str(k_folds[0])+ " k-folds")
         fig.suptitle(key_diseases) 

@@ -260,9 +260,11 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
         if feature_selection:
             svm_model = svm.SVC(kernel = "linear",max_iter=100000)
             if not multi:
-                pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc')))
+                pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
+                                                     direction="forward",n_jobs=-1,scoring='roc_auc')))
             else:
-                pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='accuracy')))
+                pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
+                                                     direction="forward",n_jobs=-1,scoring='accuracy')))
     
         pipeline_list.append(('model', LogisticRegression(C=0.01)))
         pipe = Pipeline(pipeline_list)
