@@ -250,7 +250,6 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
         if data_input | normalization:
             if data_input:
                 transformers.append(('imputer',KNNImputer(n_neighbors=5)))
-                search_space.append({'preprocessor__num__imputer__n_neighbors': [3,5,7]})
             if normalization:
                 transformers.append(('scaler',MinMaxScaler()))
             pipe_transformer = Pipeline(steps=transformers)
