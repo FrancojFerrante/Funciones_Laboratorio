@@ -310,7 +310,7 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
     elif clasificador == "svm":
         model = svm.SVC(kernel = "linear",max_iter=100000,probability=True)
     elif clasificador == "xgboost":
-        model = XGBClassifier()
+        model = XGBClassifier(eval_metric = "logloss",use_label_encoder=False)
         
     for key, value in dict_df.items():
         scores_dict[key] = []
