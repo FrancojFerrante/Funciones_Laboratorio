@@ -18,7 +18,6 @@ from xgboost import XGBClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.impute import KNNImputer
 from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.feature_selection import RFECV
 from sklearn.feature_selection import SequentialFeatureSelector as SFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
