@@ -27,6 +27,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import make_scorer
 from sklearn.linear_model import LogisticRegression
 import random
+from matplotlib.ticker import FormatStrFormatter
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -126,6 +127,8 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     df_prob["Clasificador"] = classifier_name
     df_prob["k-fold"] = str(k_fold)
     df_prob["Normalization"] = str(normalization)
+    df_prob["i_iteration"] = 0
+
     
     
     # Armo el DataFrame de feature importance para devolverlo
@@ -143,13 +146,25 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     i = 0
     llenado=0
     for train_index, test_index in kf.split(df[features], df[group_column].values.ravel()):
-        resultado = scores["estimator"][i].predict_proba(df[features].iloc[test_index])
-        target = df.iloc[test_index][group_column]
-        df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
-        df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado[:,1]
-        df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
-        llenado = llenado+len(resultado)
-        
+        if hasattr(scores["estimator"][i], "decision_function"):
+            resultado = scores["estimator"][i].decision_function(df[features].iloc[test_index])
+            target = df.iloc[test_index][group_column]
+            df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
+            df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado
+            df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
+            df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
+
+            llenado = llenado+len(resultado)
+        else:
+            resultado = scores["estimator"][i].predict_proba(df[features].iloc[test_index])
+            target = df.iloc[test_index][group_column]
+            df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
+            df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado[:,1]
+            df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
+            df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
+
+            llenado = llenado+len(resultado)
+            
         i=i+1    
     
     scores["classifier"]=classifier_name
@@ -410,7 +425,7 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
     return (dict_scores_list,dict_resultados,dict_prob)
 
 # Ploteo feature importance entregado por el clasificador. Promedio la importanced de todos y después me quedo con los primeros n_feature_importance
-def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_folds,n_repeats,cwd,show_figures=False):
+def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_folds,n_repeats,cwd,show_figures=False, replacements=None,colors=None):
         
     for key_features, value_features in dict_df_scores.items():
         if "feat" not in key_features:
@@ -429,81 +444,54 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                                 importances_matrix.append(np.zeros(len(pipe.feature_names_in_)))
                                 print(key_algorithm+"_"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats) + " No tiene feature importance")
 
-
-                            # if (algorithm_label[i_algorithm] == "regresion_logistica") | (algorithm_label[i_algorithm] == "svm"):
-                            #     importances_matrix.append([abs(ele) for ele in pipe["model"].coef_])
-                            # elif algorithm_label[i_algorithm] == "xgboost":
-                            #     importances_matrix.append(pipe["model"].feature_importances_)
-
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
-                        
-                        # codigo para que tome la cantidad de veces que aparece en el top15 en lugar de tomar el promedio
-                        # importances_matrix_max = []
-                        # for fila in importances_matrix:
-                        #     ind = np.argpartition(fila[0], -15)[-15:]
-                        #     a_agregar = [1 if i in ind else 0 for i in range(len(fila[0]))]
-                        #     importances_matrix_max.append(a_agregar)
-                        
-                        # y_values = np.sum(np.vstack(importances_matrix_max),axis=0)
-
-
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
 
-                        # for i_elemento in range(len(x_values)):
-                        #     separado = x_values[i_elemento].split("_")
-                        #     x_values[i_elemento] = separado[1] + " " + separado[4] + " " + separado[5]
+                        if replacements!=None:
+                            for i in range(len(x_values)):
+                                if x_values[i] in replacements:
+                                    x_values[i] = replacements[x_values[i]]
+                            
                         data = {'x_values':x_values,'y_values':y_values}
                         
-
-                                
                         df_feature_importance = pd.DataFrame(data).sort_values('y_values', ascending=False)
                         df_feature_importance.to_excel(cwd+"_"+key_algorithm+"/"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats)+".xlsx")
                         
 
-                        # Codigo para sumar todos los puntajes aportados por cada dimensión de cada feature
-                        # suma_granularidad = 0
-                        # suma_imaginabilidad = 0
-                        # suma_vecinos = 0
-                        # suma_frecuencia = 0
-                        # suma_longitud = 0
-                        # suma_familiaridad = 0
-                        # for i_row, row in df_feature_importance.iterrows():
-                        #     if "granularidad" in row["x_values"]:
-                        #         suma_granularidad+=row["y_values"]
-                        #     elif "imageability" in row["x_values"]:
-                        #         suma_imaginabilidad+=row["y_values"]
-                        #     elif "sa_NP" in row["x_values"]:
-                        #         suma_vecinos+=row["y_values"]
-                        #     elif "log_frq" in row["x_values"]:
-                        #         suma_frecuencia+=row["y_values"]
-                        #     elif "num_phon" in row["x_values"]:
-                        #         suma_longitud+=row["y_values"]
-                        #     elif "familiarity" in row["x_values"]:
-                        #         suma_familiaridad+=row["y_values"]
                         df_feature_importance = df_feature_importance.head(n_feature_importance) # Me quedo con las n_feature_importance filas para el gráfico
                         
+                        # formato para los labels
+                        font_axis_labels = {'family': 'arial',
+                            'color':  'black',
+                            'weight': 'bold',
+                            'size': 32,
+                            }
                         
-                        # fig, axs = plt.subplots(figsize=(20,5))
-                        # g = sns.pointplot(x="x_values", y="y_values",ci="sd",data=df_feature_importance, height=5, aspect=.8,ax=axs)
-                        # g.set_xticklabels(g.get_xticklabels(),rotation=90)
-                        # plt.show()
-                        # fig.suptitle(key_diseases) 
+                        plt.figure(figsize = (10, 6))
+                        ax1 = plt.gca()
                         
-                        # plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_"+metric+"_points_"+key_diseases+"_"+str(n_repeats)+".png",\
-                        #             bbox_inches='tight')
-                        # if show_figures:
-                        #     plt.show()
-                        # else:
-                        #     plt.close('all')
+                        color = "blue"
                         
+                        if colors!=None:
+                            for color_key, color_value in colors.items():
+                                if key_group == color_key:
+                                    color = color_value
+                            
+                        data = {'x_values':x_values,'y_values':y_values}
                         
-                        
-                        plt.figure(figsize = (10, 5))
-                        plt.bar(df_feature_importance["x_values"],df_feature_importance["y_values"], width = 0.4)
-                        plt.xlabel("Feature")
-                        plt.ylabel("Coefficient score")
-                        plt.xticks(rotation = 75) # Rotates X-Axis Ticks by 90-degrees
-                        plt.title(key_features + " with " + key_algorithm + " " + key_group)
+                        plt.barh(df_feature_importance["x_values"],df_feature_importance["y_values"], color=color)
+                        plt.xlabel("Coefficient score",fontsize=32, fontdict=font_axis_labels)
+                        plt.ylabel("Feature",fontsize=32, fontdict=font_axis_labels)
+                        plt.xticks(fontsize=20,fontname = "arial")
+                        plt.yticks(fontsize=20,fontname = "arial")
+                        #ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                        ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                        # Pongo en negrita los ticks
+                        for element in ax1.get_xticklabels():
+                            element.set_fontweight("bold")
+                        for element in ax1.get_yticklabels():
+                            element.set_fontweight("bold")
+                        plt.title("")
 
                         plt.savefig(cwd+"_"+key_algorithm+"/"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats)+".png",\
                                     bbox_inches='tight')
