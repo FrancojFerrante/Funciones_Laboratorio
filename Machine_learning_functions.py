@@ -28,6 +28,7 @@ from sklearn.metrics import make_scorer
 from sklearn.linear_model import LogisticRegression
 import random
 from matplotlib.ticker import FormatStrFormatter
+from sklearn.metrics import precision_score, recall_score, roc_auc_score, f1_score
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -100,10 +101,10 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     else:
         scoring = {
              'acc': 'accuracy',
-                     'prec_micro': 'precision',
-                     'rec_micro': 'recall',
-                     'auc':'roc_auc',
-                     'f1_score':'f1',
+                     'prec_micro': make_scorer(precision_score, zero_division=0),
+                     'rec_micro': make_scorer(recall_score, zero_division=0),
+                     'auc': make_scorer(roc_auc_score),
+                     'f1_score': make_scorer(f1_score, zero_division=0),
                      'true_neg':make_scorer(confusion_matrix_tn),
                      'false_pos':make_scorer(confusion_matrix_fp),
                      'false_neg':make_scorer(confusion_matrix_fn),
@@ -111,7 +112,6 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
             #'prob':make_scorer(return_prob,needs_proba=True)   
                    }
     
-
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
     scores = cross_validate(pipeline, df[features], df[group_column].values.ravel(), scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True,verbose=1,n_jobs=-1)
@@ -324,7 +324,7 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
     elif clasificador == "svm":
         model = svm.SVC(kernel = "linear",max_iter=100000,probability=True)
     elif clasificador == "xgboost":
-        model = XGBClassifier(eval_metric = "logloss",use_label_encoder=False)
+        model = XGBClassifier(eval_metric = "logloss")
         
     for key, value in dict_df.items():
         scores_dict[key] = []
@@ -445,6 +445,7 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                                 print(key_algorithm+"_"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats) + " No tiene feature importance")
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
+                        y_std = np.std(np.vstack(importances_matrix),axis=0)
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
 
                         if replacements!=None:
@@ -479,7 +480,7 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                             
                         data = {'x_values':x_values,'y_values':y_values}
                         
-                        plt.barh(df_feature_importance["x_values"],df_feature_importance["y_values"], color=color)
+                        plt.barh(df_feature_importance["x_values"],df_feature_importance["y_values"], color=color, xerr=y_std, align='center', ecolor='black', capsize=10)
                         plt.xlabel("Coefficient score",fontsize=32, fontdict=font_axis_labels)
                         plt.ylabel("Feature",fontsize=32, fontdict=font_axis_labels)
                         plt.xticks(fontsize=20,fontname = "arial")

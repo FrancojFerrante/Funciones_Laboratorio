@@ -16,6 +16,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import seaborn as sns
 from matplotlib.ticker import FormatStrFormatter
+import os
+import matplotlib as mpl
 
 def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre_ejecucion,n_repeats,cwd,show_figures = False):
     for key_diseases, value_diseases in dict_df.items():
@@ -238,3 +240,39 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
     plt.figure(figsize=(width,height))
     
     
+def plot_confusion_matrix(row, key_group_colors, disease, n_repeats, nombre_ejecucion, show_figures=True, width = 9.5, height = 7.5):
+
+    mpl.rcParams['font.family'] = 'Arial'
+
+    palette = sns.color_palette("light:"+key_group_colors[disease[0]+"-"+disease[1]], as_cmap=True)
+
+    fig=plt.figure(figsize=(width,height))
+    cm_total=[[row["true_neg"]/(row["true_neg"]+row["false_pos"]),row["false_pos"]/(row["true_neg"]+row["false_pos"])],[row["false_neg"]/(row["false_neg"]+row["true_pos"]),row["true_pos"]/(row["false_neg"]+row["true_pos"])]]
+    ax = sns.heatmap(cm_total, annot=True, linewidths=.5, square = True, cmap=palette, yticklabels=disease, xticklabels=disease, cbar=False, fmt='.2f', annot_kws={'fontsize': 20})
+    
+    # Set font size and weight for x and y tick labels
+    ax.tick_params(axis='both', which='major', labelsize=20)
+    ax.set_xticklabels(ax.get_xticklabels(), weight='bold')
+    ax.set_yticklabels(ax.get_yticklabels(), weight='bold')
+
+    # Set font size and weight for axis labels
+    ax.set_xlabel('Predicted label', fontsize=32, weight='bold')
+    ax.set_ylabel('Actual label', fontsize=32, weight='bold')
+    
+    # Remove the title
+    ax.set_title("")
+    
+    plt.title("");
+
+    # Create directory for saving images if it doesn't exist
+    cwd = os.getcwd()
+    save_path = cwd + "/imagenes_matriz_confusion_" + row["Clasificador"]
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    plt.savefig(save_path + "/" + row["Base"] + "_" + nombre_ejecucion + "_" + row["Grupo"] + "_" + row["k-fold"] + "_" + str(n_repeats) + '.png')
+    
+    if show_figures:
+        plt.show()
+    else:
+        plt.close('all')
