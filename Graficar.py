@@ -19,22 +19,44 @@ from matplotlib.ticker import FormatStrFormatter
 import os
 import matplotlib as mpl
 
-def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre_ejecucion,n_repeats,cwd,show_figures = False):
+def plot_pointplot_errorbar_classificacion_metrics(dict_df,k_folds,metric,nombre_ejecucion,n_repeats,cwd,show_figures = False, width = 20, height = 5):
+    mpl.rcParams['font.family'] = 'Arial'
+    legend_properties = {'weight':'bold','size':15}
+
+
     for key_diseases, value_diseases in dict_df.items():
-        fig, axs = plt.subplots(ncols=len(k_folds), figsize=(20,5))
+        fig, axs = plt.subplots(ncols=len(k_folds), figsize=(width,height))
         if len(k_folds)>1:
             for k,k_fold in enumerate(k_folds):
                 data_aux = value_diseases[value_diseases["k-fold"] == str(k_fold)]
-                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",color="k-fold",data=data_aux, dodge=True, join=True, ax=axs[k])
+                g = sns.pointplot(x="Base", y=metric, hue="Clasificador",errorbar="sd",color="k-fold",data=data_aux, dodge=True, join=True, ax=axs[k])
                 g.set_xticklabels(g.get_xticklabels(),rotation=90)
                 axs[k].set_title(str(k_fold)+ " k-folds")
+                axs[k].tick_params(axis='both', which='major', labelsize=20)
+                axs[k].set_xticklabels(axs[k].get_xticklabels(), weight='bold')
+                axs[k].set_yticklabels(axs[k].get_yticklabels(), weight='bold')
+                axs[k].set_xlabel("Base",fontsize=32, weight='bold')
+                axs[k].set_ylabel(metric,fontsize=32, weight='bold')
+                # Remove the title
+                axs[k].set_title("")
+                plt.setp(axs[k].get_legend().get_texts(), fontname='arial',fontweight="bold") 
+
         else:
             data_aux = value_diseases[value_diseases["k-fold"] == str(k_folds[0])]
-            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",ci="sd",data=data_aux, ax=axs)
+            g = sns.pointplot(x="Base", y=metric, hue="Clasificador",errorbar="sd",data=data_aux, ax=axs)
             g.set_xticklabels(g.get_xticklabels(),rotation=90)
             axs.set_title(str(k_folds[0])+ " k-folds")
-        fig.suptitle(key_diseases) 
+            axs.tick_params(axis='both', which='major', labelsize=20)
+            axs.set_xticklabels(axs.get_xticklabels(), weight='bold')
+            axs.set_yticklabels(axs.get_yticklabels(), weight='bold')
+            plt.setp(axs.get_legend().get_texts(), fontname='arial',fontweight="bold") 
 
+            axs.set_xlabel("Base",fontsize=32, weight='bold')
+            axs.set_ylabel(metric,fontsize=32, weight='bold')
+        fig.suptitle(key_diseases) 
+        # plt.xlabel('Decision scores', fontdict=font_axis_labels)
+        # plt.ylabel('Density',fontsize=32, fontdict=font_axis_labels)
+        plt.legend(prop=legend_properties)
         plt.savefig(cwd+"/resultados_machine_learning/"+nombre_ejecucion+"_imagen_machine_learning_"+metric+"_points_"+key_diseases+"_"+str(n_repeats)+".png",\
                     bbox_inches='tight')
         if show_figures:

@@ -58,10 +58,10 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         svm_model = svm.SVC(kernel = "linear",max_iter=100000)
         if not multi:
             pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
-                                                 direction="forward",n_jobs=-1,scoring='roc_auc')))
+                                                 direction="forward",n_jobs=-1,scoring='roc_auc',cv=5)))
         else:
             pipeline_list.append(('feat_sel',SFS(estimator=svm_model,n_features_to_select="auto",tol=0.01,
-                                                 direction="forward",n_jobs=-1,scoring='accuracy')))
+                                                 direction="forward",n_jobs=-1,scoring='accuracy',cv=5)))
         
         #if not multi:
         #    pipeline_list.append(('feat_sel',RFECV(estimator=svm_model,step=1,scoring='roc_auc'))) # Ver si reemplazar por forward
@@ -285,7 +285,7 @@ def pipeline_cross_validation_hyper_opt(df,group_column,features,k_fold=5,pipe=N
 
         search_space.append({'model': [LogisticRegression(multi_class='ovr',max_iter=100000)],
           'model__C': [0.01, 0.1, 1.0,2.0],
-          'model__penalty': ["none", "l2", "l1"]})
+          'model__penalty': ["None", "l2", "l1"]})
         
         search_space.append({'model': [XGBClassifier(n_estimators=5000,learning_rate=0.01)],
           'model__learning_rate': [0.001,0.01,0.1,1,2],
@@ -415,7 +415,7 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
                                                                    data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
     
         df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
-                                       list(columnas_features.keys())[0]+".xlsx") 
+                                       list(columnas_features.keys())[0]+"_" + tipo_columnas +".xlsx") 
         # df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
         #                                          tipo_columnas+".xlsx")
         dict_resultados[clasificador] = df_clasificador_multi
@@ -445,7 +445,7 @@ def feature_importance_not_feat_selection(dict_df_scores,n_feature_importance,k_
                                 print(key_algorithm+"_"+key_features+"_"+str(k_folds[i_fold])+"_folds_"+key_group+"_"+str(n_repeats) + " No tiene feature importance")
 
                         y_values = np.mean(np.vstack(importances_matrix),axis=0)
-                        y_std = np.std(np.vstack(importances_matrix),axis=0)
+                        y_std = np.std(np.vstack(importances_matrix),axis=0)[0:n_feature_importance]
                         x_values = fold["estimator"][0]["preprocessor"]._columns[0]
 
                         if replacements!=None:
