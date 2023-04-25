@@ -100,7 +100,7 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         scoring = {'acc': 'accuracy'}
     else:
         scoring = {
-             'acc': 'accuracy',
+                     'acc': 'accuracy',
                      'prec_micro': make_scorer(precision_score, zero_division=0),
                      'rec_micro': make_scorer(recall_score, zero_division=0),
                      'auc': make_scorer(roc_auc_score),
