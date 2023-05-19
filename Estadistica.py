@@ -590,8 +590,8 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
 
 
         p_values = pairwise_tukeyhsd(endog=data_clean[variable],groups=data_clean[interaction_factor],alpha=.05)
-        posthocs = pg.pairwise_ttests(dv=variable, within=within, subject=subject,
-                              between=between, padjust='bonf', data=data_clean,effsize="cohen", interaction=True)
+        # posthocs = pg.pairwise_ttests(dv=variable, within=within, subject=subject,
+        #                       between=between, padjust='bonf', data=data_clean,effsize="cohen", interaction=True)
         # Armo los grupos al revés por como lo devuelve el pairwise_tukeyhsd
         mixed_anova["posthoc"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
 

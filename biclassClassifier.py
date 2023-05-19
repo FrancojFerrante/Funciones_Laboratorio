@@ -9,7 +9,9 @@ Created on Thu Oct 13 10:56:17 2022
 from sklearn import preprocessing, svm, model_selection,metrics
 import numpy as np
 from scipy import stats
+from sklearn.impute import KNNImputer
 
+# Para cualquier modelo
 class ResultsGeneral_biclass_experiments_cv():
     def __init__(self):
         self.ResultsByFold = {}
@@ -56,6 +58,50 @@ class ResultsGeneral_biclass_experiments_cv():
         self.ResultsGeneral['y_score_complete'] = np.hstack(results_folds['score'])        
         self.ResultsGeneralByFold = results_folds
 
+class ResultsGeneral_multiclass_experiments_cv():
+    def __init__(self):
+        self.ResultsByFold = {}
+        self.ResultsGeneral = {}
+        self.ResultsGeneralByFold = {}
+        self.Model_dict = {}
+        
+    def AddResultsInFold(self, keyFold, y_real_total, y_pred_total, params_dict, score_pred_total, normalizer, model):
+        dictResults = {}
+
+        
+        
+        dictResults['Acc'] = metrics.accuracy_score(y_real_total, y_pred_total)*100
+        dictResults['F1'] = metrics.f1_score(y_real_total,y_pred_total, average='weighted')*100
+        dictResults['UAR'] = metrics.balanced_accuracy_score(y_real_total,y_pred_total) * 100
+
+
+        dictResults['Normalizer'] = normalizer
+        dictResults['y_real'] = y_real_total
+        dictResults['y_pred'] = y_pred_total
+        dictResults['scores'] = score_pred_total
+        dictResults['model'] = model
+
+
+        self.ResultsByFold[keyFold] = dictResults
+        
+    def computeGeneralResults(self):
+        dict_folds = list(self.ResultsByFold.values())
+        results_folds = {}
+        for key in dict_folds[0].keys():
+            results_folds[key] = [d_aux[key] for d_aux in dict_folds]
+            
+        for key_target in list(dict_folds[0].keys())[0:3]:
+            
+            self.ResultsGeneral[key_target+' mean'] = np.mean(results_folds[key_target]) 
+            self.ResultsGeneral[key_target+' std'] = np.std(results_folds[key_target]) 
+        
+        self.ResultsGeneral['y_real_complete'] = np.hstack(results_folds['y_real'])
+        self.ResultsGeneral['y_pred_complete'] = np.hstack(results_folds['y_pred'])
+#        self.ResultsGeneral['y_score_complete'] = np.hstack(results_folds['score'])
+
+        self.ResultsGeneralByFold = results_folds 
+        
+# Para SVM y compatble con SimpleClassifier
 class ClassifierResultsBiclassCrossValidation():
     def __init__(self):
         self.ResultsByFold = {}
@@ -104,6 +150,7 @@ class ClassifierResultsBiclassCrossValidation():
         self.ResultsGeneral['best Gamma'] = stats.mode(results_folds['Gamma'])[0][0]        
         self.ResultsGeneralByFold = results_folds
 
+
 class ClassifierResultsMulticlassCrossValidation():
     def __init__(self):
         self.ResultsByFold = {}
@@ -150,51 +197,14 @@ class ClassifierResultsMulticlassCrossValidation():
         
         self.ResultsGeneralByFold = results_folds        
         
-class ResultsGeneral_multiclass_experiments_cv():
-    def __init__(self):
-        self.ResultsByFold = {}
-        self.ResultsGeneral = {}
-        self.ResultsGeneralByFold = {}
-        self.Model_dict = {}
-        
-    def AddResultsInFold(self, keyFold, y_real_total, y_pred_total, params_dict, score_pred_total, normalizer, model):
-        dictResults = {}
-
-        
-        
-        dictResults['Acc'] = metrics.accuracy_score(y_real_total, y_pred_total)*100
-        dictResults['F1'] = metrics.f1_score(y_real_total,y_pred_total, average='weighted')*100
-        dictResults['UAR'] = metrics.balanced_accuracy_score(y_real_total,y_pred_total) * 100
-
-
-        dictResults['Normalizer'] = normalizer
-        dictResults['y_real'] = y_real_total
-        dictResults['y_pred'] = y_pred_total
-        dictResults['scores'] = score_pred_total
-        dictResults['model'] = model
-
-
-        self.ResultsByFold[keyFold] = dictResults
-        
-    def computeGeneralResults(self):
-        dict_folds = list(self.ResultsByFold.values())
-        results_folds = {}
-        for key in dict_folds[0].keys():
-            results_folds[key] = [d_aux[key] for d_aux in dict_folds]
-            
-        for key_target in list(dict_folds[0].keys())[0:3]:
-            
-            self.ResultsGeneral[key_target+' mean'] = np.mean(results_folds[key_target]) 
-            self.ResultsGeneral[key_target+' std'] = np.std(results_folds[key_target]) 
-        
-        self.ResultsGeneral['y_real_complete'] = np.hstack(results_folds['y_real'])
-        self.ResultsGeneral['y_pred_complete'] = np.hstack(results_folds['y_pred'])
-#        self.ResultsGeneral['y_score_complete'] = np.hstack(results_folds['score'])
-
-        self.ResultsGeneralByFold = results_folds           
+          
 
 
 def SimpleClassifier(X_train, Y_train, X_test, Y_test, number_folds_validation, results_object, keyFold, kernel_linear=False, n_job=-1):
+    
+    imputer_transfor=KNNImputer().fit(X_train)
+    X_train,X_test=imputer_transfor.transform(X_train),imputer_transfor.transform(X_test)
+    
     normalize_transfor=preprocessing.StandardScaler().fit(X_train)
     X_train_N,X_test_N=normalize_transfor.transform(X_train),normalize_transfor.transform(X_test)
     
