@@ -103,10 +103,29 @@ def remove_outlier_sd(df,columna1,columna2,sd_condition = 3):
             (row[columna1] <= mean_1 + (sd_condition * sd_1)) &
             (row[columna2] >= mean_2 - (sd_condition * sd_2)) &
             (row[columna2] <= mean_2 + (sd_condition * sd_2))):
-            df_sin_outliers = df_sin_outliers.append(row,ignore_index=True)
+            df_sin_outliers = pd.concat([df_sin_outliers,row],ignore_index=True)
     
     return df_sin_outliers
 
+def remove_outlier_sd_columns(df, columns, sd_condition=3):
+    means = df[columns].mean(axis=0)
+    stds = df[columns].std(axis=0)
+    
+    df_sin_outliers = pd.DataFrame(columns=df.columns)
+    
+    for _, row in df.iterrows():
+        outlier = False
+        for column in columns:
+            mean = means[column]
+            std = stds[column]
+            if (row[column] < mean - (sd_condition * std)) or (row[column] > mean + (sd_condition * std)):
+                outlier = True
+                break
+        
+        if not outlier:
+            df_sin_outliers = df_sin_outliers.append(row, ignore_index=True)
+    
+    return df_sin_outliers
 
 def anova_mixto_2x2(df_controles,df_no_controles,feature,columna_id,columna_grupo,columna_feature_1,columna_feature_2,txt_no_control):
     """
@@ -571,7 +590,7 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
             mixed_anova["ANOVA"].loc[variable,f'{factor}_p-value'] = round(results[results['Source'] == factor]['p-unc'].values[0],3)
             mixed_anova["ANOVA"].loc[variable,f'{factor}_np2'] = round(results[results['Source'] == factor]['np2'].values[0],3)
 
-            if (mixed_anova["ANOVA"].loc[variable,f'{factor}_p-value'] < .05) & (factor != 'Interaction'):
+            if (factor != 'Interaction'):
                 fig = plt.figure()
 
                 ax = fig.add_subplot()

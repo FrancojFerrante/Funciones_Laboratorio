@@ -115,66 +115,63 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
     # scores["estimator"] devuelve tantos Pipelines como n_splits en cross-validation
     scores = cross_validate(pipeline, df[features], df[group_column].values.ravel(), scoring=scoring,
                          cv=kf, return_train_score=False,return_estimator=True,verbose=1,n_jobs=-1)
-    
-    # Armo el DataFrame con los resultados
-    df_prob = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","df_index","target","probability"])
-    
-    # La cantidad de filas es igual a todas las predicciones que se hicieron (para cada sujeto, en distintas combinaciones de folds)
-    cant_filas_test = np.sum(scores["test_true_neg"])+np.sum(scores["test_true_pos"])+np.sum(scores["test_false_neg"])+np.sum(scores["test_false_pos"])
-    df_prob["Random-Seed"] = np.full((cant_filas_test,),random_seed)
-    df_prob["Feature"] = "Multi-features"
-    df_prob["Grupo"] = group_labels
-    df_prob["Clasificador"] = classifier_name
-    df_prob["k-fold"] = str(k_fold)
-    df_prob["Normalization"] = str(normalization)
-    df_prob["i_iteration"] = 0
 
-    
-    
-    # Armo el DataFrame de feature importance para devolverlo
-    #df_features_importances = pd.DataFrame(columns=[["estimator"]+features])
-    #for idx,estimator in enumerate(scores['estimator']):
+    if not multi:    
+        # Armo el DataFrame con los resultados
+        df_prob = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","df_index","target","probability"])
         
-    #    list_feature_importance = [idx] + list(np.abs(estimator["model"].coef_[0]))
-    #    df_features_importances.loc[len(df_features_importances)] = list_feature_importance        
-          
-
-    # Genero la misma estructura de folds para obtener las probabilidades de predicción de los modelos ajustados anteriormente.
-    # Esto lo hice así porque, en el momento en que lo codifiqué, sklearn no tenía forma de utilizar cross_validate y a la vez
-    # obtener los scores de probabilidad. (Quise usar cross_validate para poder correrlo 1000 iteraciones paralelizando)
-    kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
-    i = 0
-    llenado=0
-    for train_index, test_index in kf.split(df[features], df[group_column].values.ravel()):
-        if hasattr(scores["estimator"][i], "decision_function"):
-            resultado = scores["estimator"][i].decision_function(df[features].iloc[test_index])
-            target = df.iloc[test_index][group_column]
-            df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
-            df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado
-            df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
-            df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
-
-            llenado = llenado+len(resultado)
-        else:
-            resultado = scores["estimator"][i].predict_proba(df[features].iloc[test_index])
-            target = df.iloc[test_index][group_column]
-            df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
-            df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado[:,1]
-            df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
-            df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
-
-            llenado = llenado+len(resultado)
-            
-        i=i+1    
+        # La cantidad de filas es igual a todas las predicciones que se hicieron (para cada sujeto, en distintas combinaciones de folds)
+        cant_filas_test = np.sum(scores["test_true_neg"])+np.sum(scores["test_true_pos"])+np.sum(scores["test_false_neg"])+np.sum(scores["test_false_pos"])
+        df_prob["Random-Seed"] = np.full((cant_filas_test,),random_seed)
+        df_prob["Feature"] = "Multi-features"
+        df_prob["Grupo"] = group_labels
+        df_prob["Clasificador"] = classifier_name
+        df_prob["k-fold"] = str(k_fold)
+        df_prob["Normalization"] = str(normalization)
+        df_prob["i_iteration"] = 0
     
-    scores["classifier"]=classifier_name
-    scores["group"]=group_labels
-    scores["k_fold"]=k_fold
-    if multi:
-        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
-        df_resultados.loc[len(df_resultados)] = [random_seed,"Multi-features",group_labels,classifier_name,str(k_fold),str(normalization),scores['test_acc']]
+        
+        
+        # Armo el DataFrame de feature importance para devolverlo
+        #df_features_importances = pd.DataFrame(columns=[["estimator"]+features])
+        #for idx,estimator in enumerate(scores['estimator']):
+            
+        #    list_feature_importance = [idx] + list(np.abs(estimator["model"].coef_[0]))
+        #    df_features_importances.loc[len(df_features_importances)] = list_feature_importance        
+              
+    
+        # Genero la misma estructura de folds para obtener las probabilidades de predicción de los modelos ajustados anteriormente.
+        # Esto lo hice así porque, en el momento en que lo codifiqué, sklearn no tenía forma de utilizar cross_validate y a la vez
+        # obtener los scores de probabilidad. (Quise usar cross_validate para poder correrlo 1000 iteraciones paralelizando)
+        kf = RepeatedStratifiedKFold(n_splits=k_fold, n_repeats=n_repeats, random_state=random_seed)
+        i = 0
+        llenado=0
+        for train_index, test_index in kf.split(df[features], df[group_column].values.ravel()):
+            if hasattr(scores["estimator"][i], "decision_function"):
+                resultado = scores["estimator"][i].decision_function(df[features].iloc[test_index])
+                target = df.iloc[test_index][group_column]
+                df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
+                df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado
+                df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
+                df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
+    
+                llenado = llenado+len(resultado)
+            else:
+                resultado = scores["estimator"][i].predict_proba(df[features].iloc[test_index])
+                target = df.iloc[test_index][group_column]
+                df_prob.loc[llenado:llenado+len(resultado)-1,"df_index"] = test_index
+                df_prob.loc[llenado:llenado+len(resultado)-1,"probability"] = resultado[:,1]
+                df_prob.loc[llenado:llenado+len(resultado)-1,"target"] = target.values
+                df_prob.loc[llenado:llenado+len(resultado)-1,"i_iteration"] = i
+    
+                llenado = llenado+len(resultado)
+                
+            i=i+1    
+        
+        scores["classifier"]=classifier_name
+        scores["group"]=group_labels
+        scores["k_fold"]=k_fold
 
-    else:
         df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy","Precision","Recall","AUC","F1","true_neg","false_pos","false_neg","true_pos"])
         df_resultados["Accuracy"] = scores['test_acc']
         df_resultados["Precision"] = scores['test_prec_micro']
@@ -191,8 +188,27 @@ def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,grou
         df_resultados["Clasificador"] = classifier_name
         df_resultados["k-fold"] = str(k_fold)
         df_resultados["Normalization"] = str(normalization)
-   
-    return scores,df_resultados,df_prob
+       
+        return scores,df_resultados,df_prob
+    
+    # multi
+    else:
+        scores["classifier"]=classifier_name
+        scores["group"]=group_labels
+        scores["k_fold"]=k_fold
+        df_resultados = pd.DataFrame(columns=["Random-Seed","Feature","Grupo","Clasificador","k-fold","Normalization","Accuracy"])
+        df_resultados["Accuracy"] = scores['test_acc']
+        df_resultados["Random-Seed"] = random_seed
+        df_resultados["Feature"] = "Multi-features"
+        df_resultados["Grupo"] = group_labels
+        df_resultados["Clasificador"] = classifier_name
+        df_resultados["k-fold"] = str(k_fold)
+        df_resultados["Normalization"] = str(normalization)
+        
+    
+
+       
+        return scores,df_resultados,None
 
 def pipeline_personalizado_cross_validation(df,pipeline,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -338,8 +354,9 @@ def menu_clasificador(clasificador, dict_df,columna_features,columnas_grupo,k_fo
             scores_dict[key].append(scores_clasi)
             prob_dict[key][k_fold] = df_prob
 
-            df_prob.to_excel(path+"/resultados_machine_learning/probs_"+key+"_"+str(k_fold)+"_"+clasificador+"_"+\
-                                                      list(columna_features.keys())[0]+"_"+str(n_repeats)+".xlsx") 
+            if not multi:
+                df_prob.to_excel(path+"/probs_"+key+"_"+str(k_fold)+"_"+clasificador+"_"+\
+                                                          list(columna_features.keys())[0]+"_"+str(n_repeats)+".xlsx") 
                 
 
     return (scores_dict,df_clasificador_multi,prob_dict)
@@ -414,7 +431,7 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
         (scores,df_clasificador_multi,df_prob) = menu_clasificador(clasificador,dict_df,columnas_features,columnas_grupo,k_folds,path,\
                                                                    data_input = data_input,feature_selection=feature_selection,multi=multi,random_seed=random_seed,n_repeats=n_repeats)
     
-        df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
+        df_clasificador_multi.to_excel(path+"/resultados_"+clasificador+"_"+\
                                        list(columnas_features.keys())[0]+"_" + tipo_columnas +".xlsx") 
         # df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
         #                                          tipo_columnas+".xlsx")
