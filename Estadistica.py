@@ -24,6 +24,8 @@ from pathlib import Path
 import scikit_posthocs as sp
 from statsmodels.stats.anova import AnovaRM
 import itertools 
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
 
 def chi_cuadrado_transcripciones(df_list, categoria, posibilidades):
     
@@ -567,7 +569,11 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
     
     mixed_anova = {}
     mixed_anova["ANOVA"] = pd.DataFrame(index=variables)
-    mixed_anova["posthoc"] = None
+    mixed_anova["posthoc_interaccion"] = None
+    if (len(np.unique(data[between]))>2):
+        mixed_anova["posthoc_" + between] = None
+    if (len(np.unique(data[within]))>2):
+        mixed_anova["posthoc_" + within] = None
 
     if (f'{between}_{within}' not in data.columns) & (f'{within}_{between}' not in data.columns):
         for i, row in data.iterrows():
@@ -612,21 +618,52 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
         # posthocs = pg.pairwise_ttests(dv=variable, within=within, subject=subject,
         #                       between=between, padjust='bonf', data=data_clean,effsize="cohen", interaction=True)
         # Armo los grupos al revés por como lo devuelve el pairwise_tukeyhsd
-        mixed_anova["posthoc"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
+        mixed_anova["posthoc_interaccion"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
 
-        mixed_anova["posthoc"]['p-values'] = [str(round(pval,3)) for pval in p_values.pvalues]
-        mixed_anova["posthoc"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
-        mixed_anova["posthoc"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
-        mixed_anova["posthoc"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
-        mixed_anova["posthoc"]["df"] = [(len(data_clean[data_clean["Grupo_fluencia"] == group1]) + len(data_clean[data_clean["Grupo_fluencia"] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
-        mixed_anova["posthoc"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean["Grupo_fluencia"] == group2][variable], data_clean[data_clean["Grupo_fluencia"] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+        mixed_anova["posthoc_interaccion"]['p-values'] = [str(round(pval,3)) for pval in p_values.pvalues]
+        mixed_anova["posthoc_interaccion"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
+        mixed_anova["posthoc_interaccion"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
+        mixed_anova["posthoc_interaccion"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
+        mixed_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean["Grupo_fluencia"] == group1]) + len(data_clean[data_clean["Grupo_fluencia"] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+        mixed_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean["Grupo_fluencia"] == group2][variable], data_clean[data_clean["Grupo_fluencia"] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
         # mixed_anova["posthoc"]["t_ratio"] = [pg.pairwise_ttests(data[data["Grupo_fluencia"] == group1][variable], data[data["Grupo_fluencia"] == group2][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
 
 
         # for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2):
             
-        mixed_anova["posthoc"]['method'] = "Tukey's HSD"
+        mixed_anova["posthoc_interaccion"]['method'] = "Tukey's HSD"
 
+
+        if (len(np.unique(data[between]))>2):
+            
+            # Realiza comparaciones específicas entre los niveles del factor inter-sujeto
+            comp = sm.stats.multicomp.MultiComparison(data_clean[variable], data_clean[between])
+            posthoc_results = comp.tukeyhsd()
+            
+            mixed_anova["posthoc_" + between] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)])
+
+            mixed_anova["posthoc_" + between]['p-values'] = [str(round(pval,3)) for pval in posthoc_results.pvalues]
+            mixed_anova["posthoc_" + between]['mean_differences'] = [str(round(pval,3)) for pval in posthoc_results.meandiffs]
+            mixed_anova["posthoc_" + between]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in posthoc_results.confint]
+            mixed_anova["posthoc_" + between]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in posthoc_results.confint]
+            mixed_anova["posthoc_" + between]["df"] = [(len(data_clean[data_clean[between] == group1]) + len(data_clean[data_clean[between] == group2]) - 2) for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
+            mixed_anova["posthoc_" + between]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between] == group2][variable], data_clean[data_clean[between] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
+            mixed_anova["posthoc_" + between]['method'] = "Tukey's HSD"
+        
+        if (len(np.unique(data[within]))>2):
+            # Realiza comparaciones específicas entre los niveles del factor inter-sujeto
+            comp = sm.stats.multicomp.MultiComparison(data_clean[variable], data_clean[within])
+            posthoc_results = comp.tukeyhsd()
+            
+            mixed_anova["posthoc_" + within] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)])
+
+            mixed_anova["posthoc_" + within]['p-values'] = [str(round(pval,3)) for pval in posthoc_results.pvalues]
+            mixed_anova["posthoc_" + within]['mean_differences'] = [str(round(pval,3)) for pval in posthoc_results.meandiffs]
+            mixed_anova["posthoc_" + within]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in posthoc_results.confint]
+            mixed_anova["posthoc_" + within]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in posthoc_results.confint]
+            mixed_anova["posthoc_" + within]["df"] = [(len(data_clean[data_clean[within] == group1]) + len(data_clean[data_clean[within] == group2]) - 2) for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
+            mixed_anova["posthoc_" + within]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[within] == group2][variable], data_clean[data_clean[within] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
+            mixed_anova["posthoc_" + within]['method'] = "Tukey's HSD"
         fig = plt.figure()
 
         ax = fig.add_subplot()
@@ -641,3 +678,10 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
         plt.savefig(Path(fig_dir,f'boxplot_{variable}_{factor}.png'))  
 
     return mixed_anova
+
+def cohen_d_calculation(posthoc_results):
+    mean_diff = posthoc_results.meandiffs
+    n_comparisons = len(posthoc_results.groupsunique)
+    pooled_std = np.sqrt(np.sum(posthoc_results.std_pairs**2) / n_comparisons)  # Desviación estándar combinada
+    cohens_d = mean_diff / pooled_std
+    return cohens_d
