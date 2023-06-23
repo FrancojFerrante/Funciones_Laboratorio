@@ -433,8 +433,6 @@ def tres_clasificadores(clasificadores,dict_df,columnas_features,columnas_grupo,
     
         df_clasificador_multi.to_excel(path+"/resultados_"+clasificador+"_"+\
                                        list(columnas_features.keys())[0]+"_" + tipo_columnas +".xlsx") 
-        # df_clasificador_multi.to_excel(path+"/resultados_machine_learning/resultados_"+clasificador+"_"+\
-        #                                          tipo_columnas+".xlsx")
         dict_resultados[clasificador] = df_clasificador_multi
         dict_scores_list[clasificador] = scores
         dict_prob[clasificador] = df_prob

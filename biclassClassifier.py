@@ -208,8 +208,8 @@ def SimpleClassifier(X_train, Y_train, X_test, Y_test, number_folds_validation, 
     normalize_transfor=preprocessing.StandardScaler().fit(X_train)
     X_train_N,X_test_N=normalize_transfor.transform(X_train),normalize_transfor.transform(X_test)
     
-    C_array =np.geomspace(1e-4,1e3,8)
-    G_array=np.geomspace(1e-6,1e6,13)
+    C_array = np.geomspace(1e-4,1e3,8)
+    G_array = np.geomspace(1e-6,1e6,13)
     
     #Best parameters and testSet
     if kernel_linear:
