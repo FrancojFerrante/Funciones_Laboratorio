@@ -572,7 +572,7 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
     mixed_anova["posthoc_interaccion"] = None
     if (len(np.unique(data[between]))>2):
         mixed_anova["posthoc_" + between] = None
-    if (len(np.unique(data[within]))>2):
+    if (within!=None) and (len(np.unique(data[within]))>2):
         mixed_anova["posthoc_" + within] = None
 
     if (f'{between}_{within}' not in data.columns) & (f'{within}_{between}' not in data.columns):
@@ -685,3 +685,53 @@ def cohen_d_calculation(posthoc_results):
     pooled_std = np.sqrt(np.sum(posthoc_results.std_pairs**2) / n_comparisons)  # Desviación estándar combinada
     cohens_d = mean_diff / pooled_std
     return cohens_d
+
+def between_ANOVA_dictionary(data,between,subject,path_to_save,correction=True,variables=None):
+    if variables == None:
+        variables = [col for col in data.columns if isinstance(data[col][0],(int,float))]
+    
+    df_anova = {}
+    df_anova["ANOVA"] = pd.DataFrame(index=variables)
+    df_anova["posthoc_interaccion"] = None
+
+    for variable in variables:
+        # Elimino sujetos que tienen nan en alguna de sus within variables
+        reject_subjects = data.loc[data[variable].isna(),subject]
+        data_clean = data[[subj not in reject_subjects.values for subj in data[subject]]]
+        
+        results = pg.anova(data=data_clean,dv=variable,between=between) 
+        df_anova["ANOVA"].loc[variable,'method'] = 'ANOVA'
+        df_anova["ANOVA"].loc[variable,f'stat'] = round(results[results['Source'] == between]['F'].values[0],3)
+        df_anova["ANOVA"].loc[variable,f'p-value'] = round(results[results['Source'] == between]['p-unc'].values[0],3)
+        df_anova["ANOVA"].loc[variable,f'np2'] = round(results[results['Source'] == between]['np2'].values[0],3)
+
+
+
+        p_values = pairwise_tukeyhsd(endog=data_clean[variable],groups=data_clean[between],alpha=.05)
+
+        # Armo los grupos al revés por como lo devuelve el pairwise_tukeyhsd
+        df_anova["posthoc_interaccion"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
+
+        df_anova["posthoc_interaccion"]['p-values'] = [str(round(pval,3)) for pval in p_values.pvalues]
+        df_anova["posthoc_interaccion"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
+        df_anova["posthoc_interaccion"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
+        df_anova["posthoc_interaccion"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
+        df_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean[between] == group1]) + len(data_clean[data_clean[between] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+        df_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between] == group2][variable], data_clean[data_clean[between] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+            
+        df_anova["posthoc_interaccion"]['method'] = "Tukey's HSD"
+
+        fig = plt.figure()
+
+        ax = fig.add_subplot()
+
+        sns.boxplot(x=between,y=variable,data=data)
+        ax.set_xlabel(between)
+        ax.set_ylabel(variable)
+            
+        fig_dir = Path(path_to_save,'Figures')
+        fig_dir.mkdir(exist_ok=True)
+
+        plt.savefig(Path(fig_dir,f'boxplot_{variable}.png'))  
+
+    return df_anova
