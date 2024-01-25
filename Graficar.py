@@ -289,7 +289,7 @@ def plot_confusion_matrix(row, key_group_colors, disease, n_repeats, nombre_ejec
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    plt.savefig(save_path + "/" + row["Base"] + "_" + nombre_ejecucion + "_" + row["Grupo"] + "_" + row["k-fold"] + "_" + str(n_repeats) + '.png')
+    plt.savefig(save_path + "/" + row["Base"] + "_" + nombre_ejecucion + "_" + row["Grupo"] + "_" + row["k-fold"] + "_" + str(n_repeats) + '.png', dpi=300)
     
     if show_figures:
         plt.show()

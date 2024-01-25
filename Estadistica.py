@@ -602,10 +602,10 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
                 ax = fig.add_subplot()
                 
                 sns.boxplot(x=factor,y=variable,data=data,ax=ax,color='#FF5733')
-
+                plt.xticks(rotation=30)
                 ax.set_xlabel(factor)
                 ax.set_ylabel(variable)
-                
+                plt.tight_layout()
                 fig_dir = Path(path_to_save,'Figures')
                 fig_dir.mkdir(exist_ok=True)
             
@@ -624,8 +624,8 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
         mixed_anova["posthoc_interaccion"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
         mixed_anova["posthoc_interaccion"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
         mixed_anova["posthoc_interaccion"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
-        mixed_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean["Grupo_fluencia"] == group1]) + len(data_clean[data_clean["Grupo_fluencia"] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
-        mixed_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean["Grupo_fluencia"] == group2][variable], data_clean[data_clean["Grupo_fluencia"] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+        mixed_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean[between + "_" + within] == group1]) + len(data_clean[data_clean[between + "_" + within] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+        mixed_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between + "_" + within] == group2][variable], data_clean[data_clean[between + "_" + within] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
         # mixed_anova["posthoc"]["t_ratio"] = [pg.pairwise_ttests(data[data["Grupo_fluencia"] == group1][variable], data[data["Grupo_fluencia"] == group2][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
 
 
@@ -671,7 +671,8 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
         sns.boxplot(x=between,y=variable,hue=within,data=data)
         ax.set_xlabel(between)
         ax.set_ylabel(variable)
-            
+        plt.xticks(rotation=30)
+        plt.tight_layout()
         fig_dir = Path(path_to_save,'Figures')
         fig_dir.mkdir(exist_ok=True)
 
