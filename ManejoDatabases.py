@@ -128,7 +128,7 @@ def emparejamiento_estadistico_f1_desparejo(df,column_group,variables,tipos,min_
     return df
 
 
-def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_value):
+def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_value,col_conservar = None,n_dif = 5, n_max = None):
     
     def calcular_resultado(lista):
         multiplicacion = 1
@@ -140,10 +140,6 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
     
         resultado = (multiplicacion / suma) * cantidad_elementos
         return resultado
-
-    # Elimino filas que tengan nan en alguna variable
-    # for variable in variables:
-    #     df = df[df[variable].notna()]
 
     grupos = df[column_group]
 
@@ -179,17 +175,12 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
 
     iteracion = 0
     # df_emparejado = pd.DataFrame()
-    while any(valor < min_p_value for valor in p_values) or (((df[column_group].value_counts().max()) - (df[column_group].value_counts().min())) >5):
-        # p_value_age = f_oneway(df["Age"].values)[1]
-        # p_value_education = f_oneway(df["Education"].values)[1]
-        # _, p_value_sex, _, _ = chi2_contingency(tabla_contingencia)
+    while any(valor < min_p_value for valor in p_values) or (((df[column_group].value_counts().max()) - (df[column_group].value_counts().min())) > n_dif)\
+    or ((n_max is not None) and (df[column_group].value_counts().max() > n_max)):
+    
         print(str(iteracion) + ")")
 
-        grupo_mayor = df[column_group].value_counts().idxmax()
-        grupo_menor = df[column_group].value_counts().idxmin()
-
-        #df_min = df[df["GROUP"] == valor_mas_frecuente]
-        
+        grupo_mayor = df[column_group].value_counts().idxmax()        
         
         puntaje_p = 0
         puntaje_p_mayor = 0
@@ -197,6 +188,10 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
         # Crear un bucle for para iterar sobre cada participante del grupo mayor
         for participante in df[df[column_group] == grupo_mayor].index:
             # Eliminar el participante del DataFrame copia
+            
+            if (col_conservar is not None) and (df.loc[participante][col_conservar] == True):
+                continue
+            
             df_copia = df.drop(participante)
             
             grupos = df_copia[column_group]
@@ -239,6 +234,8 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
                 participante_mayor = participante
                
         
+        if iteracion == 37:
+            print("paro")
         df = df.drop(participante_mayor)
         iteracion += 1
         grupos = df[column_group]

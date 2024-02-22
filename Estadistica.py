@@ -563,77 +563,109 @@ def two_by_two_ANOVA(data,within,between,subject,path_to_save,correction=True,va
 
     return mixed_anova
 
-def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correction=True,variables=None):
+def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,palette,correction=True,variables=None):
     if variables == None:
         variables = [col for col in data.columns if isinstance(data[col][0],(int,float))]
     
     mixed_anova = {}
     mixed_anova["ANOVA"] = pd.DataFrame(index=variables)
     mixed_anova["posthoc_interaccion"] = None
-    if (len(np.unique(data[between]))>2):
+    if (len(np.unique(data[between]))>=2):
         mixed_anova["posthoc_" + between] = None
-    if (within!=None) and (len(np.unique(data[within]))>2):
+    if (within!=None) and (len(np.unique(data[within]))>=2):
         mixed_anova["posthoc_" + within] = None
 
-    if (f'{between}_{within}' not in data.columns) & (f'{within}_{between}' not in data.columns):
-        for i, row in data.iterrows():
-            data.loc[i,f'{between}_{within}'] = f'{row[between]}_{row[within]}'
+    if within != None:
+        if (f'{between}_{within}' not in data.columns) & (f'{within}_{between}' not in data.columns):
+            for i, row in data.iterrows():
+                data.loc[i,f'{between}_{within}'] = f'{row[between]}_{row[within]}'
+            
+            interaction_factor = f'{between}_{within}'
         
-        interaction_factor = f'{between}_{within}'
-    
-    else:
-        interaction_factor = f'{between}_{within}' if f'{between}_{within}' in data.columns else f'{within}_{between}'
+        else:
+            interaction_factor = f'{between}_{within}' if f'{between}_{within}' in data.columns else f'{within}_{between}'
 
     for variable in variables:
         # Elimino sujetos que tienen nan en alguna de sus within variables
         reject_subjects = data.loc[data[variable].isna(),subject]
         data_clean = data[[subj not in reject_subjects.values for subj in data[subject]]]
         
-        results = pg.mixed_anova(data=data_clean,dv=variable,within=within,between=between,subject=subject,correction=correction)  #TODO: Explorar mejor el parámetro 'correction'
-        mixed_anova["ANOVA"].loc[variable,'method'] = 'Mixed effects ANOVA'
-        for factor in [between,within,'Interaction']:
-            mixed_anova["ANOVA"].loc[variable,f'{factor}_stat'] = round(results[results['Source'] == factor]['F'].values[0],3)
-            mixed_anova["ANOVA"].loc[variable,f'{factor}_p-value'] = round(results[results['Source'] == factor]['p-unc'].values[0],3)
-            mixed_anova["ANOVA"].loc[variable,f'{factor}_np2'] = round(results[results['Source'] == factor]['np2'].values[0],3)
-
-            if (factor != 'Interaction'):
-                fig = plt.figure()
-
-                ax = fig.add_subplot()
-                
-                sns.boxplot(x=factor,y=variable,data=data,ax=ax,color='#FF5733')
-                plt.xticks(rotation=30)
-                ax.set_xlabel(factor)
-                ax.set_ylabel(variable)
-                plt.tight_layout()
-                fig_dir = Path(path_to_save,'Figures')
-                fig_dir.mkdir(exist_ok=True)
-            
-                plt.savefig(Path(fig_dir,f'boxplot_{variable}_{factor}.png'))
+        if within != None:
+            results = pg.mixed_anova(data=data_clean,dv=variable,within=within,between=between,subject=subject,correction=correction)  #TODO: Explorar mejor el parámetro 'correction'
+            mixed_anova["ANOVA"].loc[variable,'method'] = 'Mixed effects ANOVA'
+            for factor in [between,within,'Interaction']:
+                mixed_anova["ANOVA"].loc[variable,f'{factor}_stat'] = round(results[results['Source'] == factor]['F'].values[0],3)
+                mixed_anova["ANOVA"].loc[variable,f'{factor}_p-value'] = round(results[results['Source'] == factor]['p-unc'].values[0],3)
+                mixed_anova["ANOVA"].loc[variable,f'{factor}_np2'] = round(results[results['Source'] == factor]['np2'].values[0],3)
     
-        # if results[results['Source']=='Interaction']['p-unc'].values[0]< .05:
+                if (factor != 'Interaction'):
+                    fig = plt.figure()
+    
+                    ax = fig.add_subplot()
+                    
+                    sns.boxplot(x=factor,y=variable,data=data,ax=ax,color='#FF5733',showmeans=True,
+            meanprops={"marker":"o",
+                       "markerfacecolor":"white", 
+                       "markeredgecolor":"black",
+                      "markersize":"10"})
+                    plt.xticks(rotation=30)
+                    ax.set_xlabel(factor)
+                    ax.set_ylabel(variable)
+                    plt.tight_layout()
+                    fig_dir = Path(path_to_save,'Figures')
+                    fig_dir.mkdir(exist_ok=True)
+                
+                    plt.savefig(Path(fig_dir,f'boxplot_{variable}_{factor}.png'))
+        
+            # if results[results['Source']=='Interaction']['p-unc'].values[0]< .05:
+    
+    
+            p_values = pairwise_tukeyhsd(endog=data_clean[variable],groups=data_clean[interaction_factor],alpha=.05)
+            # posthocs = pg.pairwise_ttests(dv=variable, within=within, subject=subject,
+            #                       between=between, padjust='bonf', data=data_clean,effsize="cohen", interaction=True)
+            # Armo los grupos al revés por como lo devuelve el pairwise_tukeyhsd
+            mixed_anova["posthoc_interaccion"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
+    
+            mixed_anova["posthoc_interaccion"]['p-values'] = [str(round(pval,3)) for pval in p_values.pvalues]
+            mixed_anova["posthoc_interaccion"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
+            mixed_anova["posthoc_interaccion"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
+            mixed_anova["posthoc_interaccion"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
+            mixed_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean[between + "_" + within] == group1]) + len(data_clean[data_clean[between + "_" + within] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+            mixed_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between + "_" + within] == group2][variable], data_clean[data_clean[between + "_" + within] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+            # mixed_anova["posthoc"]["t_ratio"] = [pg.pairwise_ttests(data[data["Grupo_fluencia"] == group1][variable], data[data["Grupo_fluencia"] == group2][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
+    
+    
+            # for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2):
+                
+            mixed_anova["posthoc_interaccion"]['method'] = "Tukey's HSD"
 
+        else:
+            results = pg.anova(data=data_clean, dv=variable, between=between)
+            mixed_anova["ANOVA"].loc[variable,'method'] = 'Mixed effects ANOVA'
+            mixed_anova["ANOVA"].loc[variable,f'{between}_stat'] = round(results['F'].values[0],3)
+            mixed_anova["ANOVA"].loc[variable,f'{between}_p-value'] = round(results['p-unc'].values[0],3)
+            mixed_anova["ANOVA"].loc[variable,f'{between}_np2'] = round(results['np2'].values[0],3)
 
-        p_values = pairwise_tukeyhsd(endog=data_clean[variable],groups=data_clean[interaction_factor],alpha=.05)
-        # posthocs = pg.pairwise_ttests(dv=variable, within=within, subject=subject,
-        #                       between=between, padjust='bonf', data=data_clean,effsize="cohen", interaction=True)
-        # Armo los grupos al revés por como lo devuelve el pairwise_tukeyhsd
-        mixed_anova["posthoc_interaccion"] = pd.DataFrame(index=[f'{group2}_vs_{group1}' for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)])
-
-        mixed_anova["posthoc_interaccion"]['p-values'] = [str(round(pval,3)) for pval in p_values.pvalues]
-        mixed_anova["posthoc_interaccion"]['mean_differences'] = [str(round(pval,3)) for pval in p_values.meandiffs]
-        mixed_anova["posthoc_interaccion"]['CI_left'] = [str(round(CI_left[0],3)) for CI_left in p_values.confint]
-        mixed_anova["posthoc_interaccion"]['CI_right'] = [str(round(CI_right[1],3)) for CI_right in p_values.confint]
-        mixed_anova["posthoc_interaccion"]["df"] = [(len(data_clean[data_clean[between + "_" + within] == group1]) + len(data_clean[data_clean[between + "_" + within] == group2]) - 2) for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
-        mixed_anova["posthoc_interaccion"]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between + "_" + within] == group2][variable], data_clean[data_clean[between + "_" + within] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
-        # mixed_anova["posthoc"]["t_ratio"] = [pg.pairwise_ttests(data[data["Grupo_fluencia"] == group1][variable], data[data["Grupo_fluencia"] == group2][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2)]
-
-
-        # for (group1,group2) in itertools.combinations(p_values.groupsunique,r=2):
+            fig = plt.figure()
+    
+            ax = fig.add_subplot()
+    
+            sns.boxplot(x=between,y=variable,data=data,showmeans=True,
+            meanprops={"marker":"o",
+                       "markerfacecolor":"white", 
+                       "markeredgecolor":"black",
+                      "markersize":"10"},
+            palette = palette)
+            ax.set_xlabel(between)
+            ax.set_ylabel(variable)
+            plt.xticks(rotation=30)
+            plt.tight_layout()
+            fig_dir = Path(path_to_save,'Figures')
+            fig_dir.mkdir(exist_ok=True)
+            grupo_str = "_".join(np.unique(data[between].values))
+            plt.savefig(Path(fig_dir,f'boxplot_{variable}_{grupo_str}.png')) 
             
-        mixed_anova["posthoc_interaccion"]['method'] = "Tukey's HSD"
-
-
+            # print(results)
         if (len(np.unique(data[between]))>2):
             
             # Realiza comparaciones específicas entre los niveles del factor inter-sujeto
@@ -650,7 +682,7 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
             mixed_anova["posthoc_" + between]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[between] == group2][variable], data_clean[data_clean[between] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
             mixed_anova["posthoc_" + between]['method'] = "Tukey's HSD"
         
-        if (len(np.unique(data[within]))>2):
+        if (within != None) and (len(np.unique(data[within]))>=2):
             # Realiza comparaciones específicas entre los niveles del factor inter-sujeto
             comp = sm.stats.multicomp.MultiComparison(data_clean[variable], data_clean[within])
             posthoc_results = comp.tukeyhsd()
@@ -664,19 +696,23 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,correct
             mixed_anova["posthoc_" + within]["df"] = [(len(data_clean[data_clean[within] == group1]) + len(data_clean[data_clean[within] == group2]) - 2) for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
             mixed_anova["posthoc_" + within]["cohen_d"] = [pg.compute_effsize(data_clean[data_clean[within] == group2][variable], data_clean[data_clean[within] == group1][variable], paired=False, eftype='cohen') for (group1,group2) in itertools.combinations(posthoc_results.groupsunique,r=2)]
             mixed_anova["posthoc_" + within]['method'] = "Tukey's HSD"
-        fig = plt.figure()
-
-        ax = fig.add_subplot()
-
-        sns.boxplot(x=between,y=variable,hue=within,data=data)
-        ax.set_xlabel(between)
-        ax.set_ylabel(variable)
-        plt.xticks(rotation=30)
-        plt.tight_layout()
-        fig_dir = Path(path_to_save,'Figures')
-        fig_dir.mkdir(exist_ok=True)
-
-        plt.savefig(Path(fig_dir,f'boxplot_{variable}_{factor}.png'))  
+            fig = plt.figure()
+    
+            ax = fig.add_subplot()
+    
+            sns.boxplot(x=between,y=variable,hue=within,data=data,showmeans=True,
+            meanprops={"marker":"o",
+                       "markerfacecolor":"white", 
+                       "markeredgecolor":"black",
+                      "markersize":"10"})
+            ax.set_xlabel(between)
+            ax.set_ylabel(variable)
+            plt.xticks(rotation=30)
+            plt.tight_layout()
+            fig_dir = Path(path_to_save,'Figures')
+            fig_dir.mkdir(exist_ok=True)
+    
+            plt.savefig(Path(fig_dir,f'boxplot_{variable}_{factor}.png'))  
 
     return mixed_anova
 
