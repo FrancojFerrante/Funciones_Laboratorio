@@ -6,6 +6,8 @@ Created on Tue Nov 16 10:50:40 2021
 """
 # Estadistica.py>
 from scipy.stats import chi2_contingency
+from scipy.stats import ttest_ind
+
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -738,9 +740,9 @@ def between_ANOVA_dictionary(data,between,subject,path_to_save,correction=True,v
         
         results = pg.anova(data=data_clean,dv=variable,between=between) 
         df_anova["ANOVA"].loc[variable,'method'] = 'ANOVA'
-        df_anova["ANOVA"].loc[variable,f'stat'] = round(results[results['Source'] == between]['F'].values[0],3)
-        df_anova["ANOVA"].loc[variable,f'p-value'] = round(results[results['Source'] == between]['p-unc'].values[0],3)
-        df_anova["ANOVA"].loc[variable,f'np2'] = round(results[results['Source'] == between]['np2'].values[0],3)
+        df_anova["ANOVA"].loc[variable,'stat'] = round(results[results['Source'] == between]['F'].values[0],3)
+        df_anova["ANOVA"].loc[variable,'p-value'] = round(results[results['Source'] == between]['p-unc'].values[0],3)
+        df_anova["ANOVA"].loc[variable,'np2'] = round(results[results['Source'] == between]['np2'].values[0],3)
 
 
 
@@ -772,3 +774,40 @@ def between_ANOVA_dictionary(data,between,subject,path_to_save,correction=True,v
         plt.savefig(Path(fig_dir,f'boxplot_{variable}.png'))  
 
     return df_anova
+
+def t_test(data,between,subject,path_to_save,palette=None,variables=None):
+    if variables == None:
+        variables = [col for col in data.columns if isinstance(data[col][0],(int,float))]
+        
+    df_t_test = {}
+    
+    df_t_test["t_test"] = pd.DataFrame(index=variables)
+
+    groups = np.unique(data[between].values)
+    for variable in variables:
+        # Elimino sujetos que tienen nan en alguna de sus within variables
+        reject_subjects = data.loc[data[variable].isna(),subject]
+        data_clean = data[[subj not in reject_subjects.values for subj in data[subject]]]
+        
+        
+        results = ttest_ind(data_clean[data_clean[between] == groups[0]][variable], data_clean[data_clean[between] == groups[1]][variable])
+        df_t_test["t_test"].loc[variable,'method'] = 't_test'
+        df_t_test["t_test"].loc[variable,'t'] = round(results.statistic,3)
+        df_t_test["t_test"].loc[variable,'p-value'] = round(results.pvalue,3)
+        df_t_test["t_test"].loc[variable,'df'] = results.df
+        df_t_test["t_test"].loc[variable,'cohend'] = cohend(data_clean[data_clean[between] == groups[0]][variable], data_clean[data_clean[between] == groups[1]][variable])
+
+        fig = plt.figure()
+
+        ax = fig.add_subplot()
+
+        sns.boxplot(x=between,y=variable,data=data)
+        ax.set_xlabel(between)
+        ax.set_ylabel(variable)
+            
+        fig_dir = Path(path_to_save,'Figures')
+        fig_dir.mkdir(exist_ok=True)
+
+        plt.savefig(Path(fig_dir,f'boxplot_{variable}_{groups[0]}_{groups[1]}.png'))  
+
+    return df_t_test

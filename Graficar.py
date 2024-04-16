@@ -237,7 +237,7 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
                  hist_kws={'edgecolor':'black','color':colorNegative, "alpha": 0.7},
                  kde_kws={"color": colorNegative, "linestyle":'--',"linewidth":5}, bins = bins)
     # barras y líneas de la clase positiva
-    sns.distplot(scores_o[y_labels_o==1], label=positiveClass, color=colorPositive,
+    ax2 = sns.distplot(scores_o[y_labels_o==1], label=positiveClass, color=colorPositive,
                  hist_kws={'edgecolor':'black','color':colorPositive, "alpha": 0.7},
                  kde_kws={"color": colorPositive,"linewidth":5}, bins = bins)
     
@@ -245,17 +245,24 @@ def graphicDistributions(scores_o, y_labels_o, bins, positiveClass = 'Positive',
     plt.ylabel('Density',fontsize=32, fontdict=font_axis_labels)
     plt.legend(fontsize=17)
     plt.setp(ax1.get_legend().get_texts(), fontname='arial',fontweight="bold") 
+    plt.setp(ax2.get_legend().get_texts(), fontname='arial',fontweight="bold") 
 
     # Pongo en negrita los ticks
     for element in ax1.get_xticklabels():
         element.set_fontweight("bold")
     for element in ax1.get_yticklabels():
         element.set_fontweight("bold")
+    for element in ax2.get_xticklabels():
+        element.set_fontweight("bold")
+    for element in ax2.get_yticklabels():
+        element.set_fontweight("bold")
     plt.xticks(fontsize=20,fontname = "arial")
     plt.yticks(fontsize=20,fontname = "arial")
     ax1.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax1.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    plt.savefig(path+"distribution.svg")
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax2.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    plt.savefig(path+"distribution.eps")
     plt.figure(figsize=(width,height))
     
     
