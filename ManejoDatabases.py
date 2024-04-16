@@ -227,15 +227,10 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
             
             puntaje_p = calcular_resultado(p_values)
             
-            if puntaje_p <= 0:
-                print("algo")
             if puntaje_p >= puntaje_p_mayor:
                 puntaje_p_mayor = puntaje_p
                 participante_mayor = participante
                
-        
-        if iteracion == 37:
-            print("paro")
         df = df.drop(participante_mayor)
         iteracion += 1
         grupos = df[column_group]
