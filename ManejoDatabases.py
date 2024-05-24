@@ -7,8 +7,7 @@ Created on Mon Mar  7 09:34:51 2022
 # ManejoDatabases.py>
 
 from scipy import stats
-from scipy.stats import f_oneway
-from scipy.stats import chi2_contingency
+from scipy.stats import f_oneway, chi2_contingency, ttest_ind, dunnett
 import pandas as pd
 import numpy as np
 
@@ -267,7 +266,76 @@ def emparejamiento_estadistico_f1_parejo(df,column_group,variables,tipos,min_p_v
         
         
         
-        
+def emparejamiento_estadistico_f1_parejo_control(df, column_group, control, variables, tipos, min_p_value, buffer=5, intocables=[]):
+
+    def calcular_resultado(lista):
+        multiplicacion = np.prod(lista)
+        suma = np.sum(lista)
+        cantidad_elementos = len(lista)
+        resultado = (multiplicacion / suma) * cantidad_elementos
+        return resultado
+
+    def calcular_p_values(col_grupo,grupo_control, grupo_resto, variables, tipos):
+        p_values_mult = []
+        p_values_min = []
+
+        for variable, tipo in zip(variables, tipos):
+            variable_sin_nan_control = grupo_control.loc[grupo_control[variable].dropna().index]
+            variable_sin_nan_resto = grupo_resto.loc[grupo_resto[variable].dropna().index]
+
+            # grupos_sin_nan = grupo_control[grupo_control[variable].notna()]
+
+            if tipo == "continua":
+                # test_func = f_oneway if len(np.unique(grupos)) > 2 else ttest_ind
+                result_dunnett = dunnett(*[variable_sin_nan_resto[variable_sin_nan_resto[col_grupo] == g][variable].values for g in np.unique(variable_sin_nan_resto[col_grupo])],control=variable_sin_nan_control[variable].values).pvalue
+                p_values_mult.append(np.prod(result_dunnett))
+                p_values_min.append(result_dunnett.min())
+                
+            # elif tipo == "categorica":
+            #     tabla_contingencia = pd.crosstab(grupos_sin_nan, variable_sin_nan)
+            #     p_values.append(chi2_contingency(tabla_contingencia)[1])
+        return p_values_mult,p_values_min
+
+    # df = df.dropna(subset=variables)
+    grupo_control = df[df[column_group] == control]
+    grupo_resto = df[df[column_group] != control]
+    
+    p_values_mult,p_values_min = calcular_p_values(column_group,grupo_control, grupo_resto,variables, tipos)
+
+    iteracion = 0
+    while any(valor < min_p_value for valor in p_values_min) or (((df[column_group].value_counts().max()) - (df[column_group].value_counts().min())) > buffer):
+        print(str(iteracion) + ")")
+
+        grupo_mayor = df[column_group].value_counts().idxmax()
+
+        puntaje_p_mayor = 0
+        participante_mayor = None
+
+        participantes_eliminables = df[df[column_group] == grupo_mayor].index.difference(intocables)
+        for participante in participantes_eliminables:
+            df_copia = df.drop(participante)
+            # grupos = df_copia[column_group]
+            
+            
+            grupo_control_copia = df_copia[df_copia[column_group] == control]
+            grupo_resto_copia = df_copia[df_copia[column_group] != control]
+            
+            
+            
+            p_values_mult_temp,p_values_min_temp = calcular_p_values(column_group,grupo_control_copia,grupo_resto_copia, variables, tipos)
+            puntaje_p = calcular_resultado(p_values_mult_temp)
+
+            if puntaje_p >= puntaje_p_mayor:
+                puntaje_p_mayor = puntaje_p
+                participante_mayor = participante
+                p_values = p_values_min_temp
+
+        # print(f"{iteracion}) participante eliminado: \n{df.loc[participante_mayor]} \n\n")
+        print(p_values)
+        df = df.drop(participante_mayor)
+        iteracion += 1
+
+    return df, p_values, iteracion
         
         
         
