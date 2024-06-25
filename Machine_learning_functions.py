@@ -28,7 +28,13 @@ from sklearn.metrics import make_scorer
 from sklearn.linear_model import LogisticRegression
 import random
 from matplotlib.ticker import FormatStrFormatter
-from sklearn.metrics import precision_score, recall_score, roc_auc_score, f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, f1_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def pipeline_cross_validation(df,ml_classifier,classifier_name,group_labels,group_column,features,k_fold, random_seed = None,normalization=True,data_input=False,feature_selection=False,multi=False,n_repeats = 1):
     
@@ -930,3 +936,415 @@ def xgboost_cross_validation(df,group_labels,group_column,features,k_fold,random
         df_resultados.to_excel(path_excel+".xlsx")
     
     return df_resultados
+
+
+def clasificacion_hyp_opt():
+
+
+
+
+    df_data = pd.read_csv("D:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/psicolinguisticas/psico_4_grupos.csv")
+    # selected_columns = df_data.filter(regex="promedio|osv|PIDN|Zac's DX")
+
+    df_data = df_data.loc[:, ~df_data.columns.str.contains("words_lemma_Nsyll")]
+    # df_data = df_data.drop(["Unnamed: 0"],axis=1)
+
+    df_nc_lvppa = df_data[(df_data["Zac's DX"] == "NC") | (df_data["Zac's DX"] == "lvPPA")].reset_index(drop=True)
+    df_nc_nfvppa = df_data[(df_data["Zac's DX"] == "NC") | (df_data["Zac's DX"] == "nfvPPA")].reset_index(drop=True)
+    df_nc_svppa = df_data[(df_data["Zac's DX"] == "NC") | (df_data["Zac's DX"] == "svPPA")].reset_index(drop=True)
+    df_lvppa_nfvppa = df_data[(df_data["Zac's DX"] == "lvPPA") | (df_data["Zac's DX"] == "nfvPPA")].reset_index(drop=True)
+    df_lvppa_svppa = df_data[(df_data["Zac's DX"] == "lvPPA") | (df_data["Zac's DX"] == "svPPA")].reset_index(drop=True)
+    df_nfvppa_svppa = df_data[(df_data["Zac's DX"] == "nfvPPA") | (df_data["Zac's DX"] == "svPPA")].reset_index(drop=True)
+
+    # df_nc_lvppa["Zac's DX"] = df_nc_lvppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+    # df_nc_nfvppa["Zac's DX"] = df_nc_nfvppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+    # df_nc_svppa["Zac's DX"] = df_nc_svppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+    # df_lvppa_nfvppa["Zac's DX"] = df_lvppa_nfvppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+    # df_lvppa_svppa["Zac's DX"] = df_lvppa_svppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+    # df_nfvppa_svppa["Zac's DX"] = df_nfvppa_svppa["Zac's DX"].sample(frac=1).reset_index(drop=True)
+
+    group_column = "Zac's DX"
+    id_column = "PIDN"
+    dict_dfs= {
+        "nc_lvppa_sin_nsyll":df_nc_lvppa,
+               "nc_nfvppa_sin_nsyll":df_nc_nfvppa,
+                "nc_svppa_sin_nsyll":df_nc_svppa,
+                "lvppa_nfvppa_sin_nsyll":df_lvppa_nfvppa,
+                "lvppa_svppa_sin_nsyll":df_lvppa_svppa,
+                "nfvppa_svppa_sin_nsyll":df_nfvppa_svppa}
+
+
+    results = []
+    models = [
+        ('Logistic Regression', LogisticRegression(max_iter = 100000), {'C': [0.00001,0.0001, 0.001,0.01, 0.1, 1, 10, 100, 1000, 10000, 100000]}),
+        ('Random Forest', RandomForestClassifier(), {'n_estimators': [50, 100, 200]}),
+        ('SVM', SVC(max_iter = 100000), {'kernel': ['linear'], 'C': [0.00001,0.0001, 0.001,0.01, 0.1, 1, 10, 100, 1000, 10000, 100000]}),
+        # ('XGBoost', XGBClassifier(), {'max_depth': [3, 5, 7], 'learning_rate': [0.00001,0.0001, 0.001,0.01, 0.1, 1, 10, 100, 1000, 10000, 100000], 'n_estimators': [10, 100, 1000, 3000, 5000]})
+        
+        # ('Logistic Regression', LogisticRegression(), {'C': [0.00001,0.0001, ]}),
+        # ('Random Forest', RandomForestClassifier(), {'n_estimators': [50, 100]}),
+        # ('SVM', SVC(), {'kernel': ['linear'], 'C': [0.00001,0.0001]})
+        # ('XGBoost', XGBClassifier(), {'max_depth': [3, 5], 'learning_rate': [0.00001,0.0001]})
+    ]
+
+    # %% Grafico de barras
+
+    def calcular_percentil_25(columna):
+        return np.percentile(columna, 25)
+
+    def calcular_percentil_75(columna):
+        return np.percentile(columna, 75)
+
+
+    def grafico_barras_horizontales(df, x_label='Columnas', y_label='Promedio', title='Promedio y Desvío Estándar de Columnas', path=None):
+        
+        # Identificar las columnas numéricas
+        df_columnas_numericas = df.select_dtypes(include=['number'])
+        
+        # Calcular promedio y desvío estándar de cada columna
+        promedios = df_columnas_numericas.abs().mean()
+        desvios = df_columnas_numericas.abs().std()
+        
+        # Aplica la función a cada columna
+        q1 = df_columnas_numericas.apply(calcular_percentil_25)    #q3 = np.percentile(datos, 75)  # Tercer cuartil (Q3)
+        q3 = df_columnas_numericas.apply(calcular_percentil_75)    #q3 = np.percentile(datos, 75)  # Tercer cuartil (Q3)
+
+        iqr = q3 - q1
+        
+        # Ordenar por promedio de mayor a menor
+        promedios_sorted = promedios.sort_values(ascending=False)
+        
+        # Crear el gráfico de barras horizontales
+        fig, ax = plt.subplots()
+        
+        # Posiciones de las barras
+        y_pos = np.arange(len(promedios_sorted))
+        
+        # Dibujar las barras horizontales
+        bars = ax.barh(y_pos, promedios_sorted, xerr=desvios[promedios_sorted.index], align='center', alpha=0.7)
+        
+        # Etiquetas de las columnas en el eje Y
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(promedios_sorted.index)
+        
+        # Etiquetas y título
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(title)
+        
+        # Crear un DataFrame con los datos de variable, promedio y std
+        df_result = pd.DataFrame({
+            'variable': promedios_sorted.index,
+            'promedio': promedios_sorted.values,
+            'std': desvios[promedios_sorted.index].values,
+            'iqr': iqr[promedios_sorted.index]
+        })
+        
+        if path is not None:
+            df_result.to_excel(path + ".xlsx",index=False)
+            plt.savefig(path + '.png', bbox_inches='tight')
+            
+        # Mostrar el gráfico
+        plt.show()
+        
+        
+    def grafico_barras_horizontales_count(df, x_label='Columnas', y_label='Promedio', title='Promedio y Desvío Estándar de Columnas', path=None):
+        
+        # Identificar las columnas numéricas
+        df_columnas_numericas = df.select_dtypes(include=['number'])
+        
+        # Calcular promedio y desvío estándar de cada columna
+        promedios = df_columnas_numericas.abs().sum()
+        # desvios = df_columnas_numericas.abs().std()
+        
+        # Aplica la función a cada columna
+        q1 = df_columnas_numericas.apply(calcular_percentil_25)    #q3 = np.percentile(datos, 75)  # Tercer cuartil (Q3)
+        q3 = df_columnas_numericas.apply(calcular_percentil_75)    #q3 = np.percentile(datos, 75)  # Tercer cuartil (Q3)
+
+        iqr = q3 - q1
+        
+        # Ordenar por promedio de mayor a menor
+        promedios_sorted = promedios.sort_values(ascending=False)
+        
+        # Crear el gráfico de barras horizontales
+        fig, ax = plt.subplots()
+        
+        # Posiciones de las barras
+        y_pos = np.arange(len(promedios_sorted))
+        
+        # Dibujar las barras horizontales
+        bars = ax.barh(y_pos, promedios_sorted, align='center', alpha=0.7)
+        
+        # Etiquetas de las columnas en el eje Y
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(promedios_sorted.index)
+        
+        # Etiquetas y título
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(title)
+        
+        # Crear un DataFrame con los datos de variable, promedio y std
+        df_result = pd.DataFrame({
+            'variable': promedios_sorted.index,
+            'promedio': promedios_sorted.values,
+            # 'std': desvios[promedios_sorted.index].values,
+            'iqr': iqr[promedios_sorted.index]
+        })
+        
+        if path is not None:
+            df_result.to_excel(path + "_count.xlsx",index=False)
+            plt.savefig(path + '_count.png', bbox_inches='tight')
+            
+        # Mostrar el gráfico
+        plt.show()
+        
+    def abs_values_in_dict(input_dict):
+        return {key: abs(value) for key, value in input_dict.items()}
+    # %%
+
+    label_mapping = [{'NC': 0, 'lvPPA': 1},{'NC': 0, 'nfvPPA': 1},{'NC': 0, 'svPPA': 1}
+                      ,{'lvPPA': 0, 'nfvPPA': 1},{'lvPPA': 0, 'svPPA': 1},{'nfvPPA': 0, 'svPPA': 1}]
+
+    # label_mapping = [{'NC': 0, 'nfvPPA': 1},{'NC': 0, 'svPPA': 1},{'nfvPPA': 0, 'svPPA': 1}]
+    # %%
+    i_model = 0
+    for key, value in dict_dfs.items():
+        # Divide los datos en características (variables independientes) y la variable objetivo
+        X = value.drop([group_column,id_column], axis=1)  # Características
+        y = value[group_column]  # Variable objetivo
+        # Crea una instancia del codificador de etiquetas
+        # label_encoder = LabelEncoder()
+        
+        # Convierte las etiquetas categóricas a valores numéricos
+        # y = label_encoder.fit_transform(y)
+        
+        y = y.map(label_mapping[i_model])
+        i_model+=1
+        results = []
+        
+        # Aplica la normalización Min-Max a los datos de entrenamiento
+        scaler = MinMaxScaler()
+        imputer = KNNImputer(n_neighbors=3)
+
+        n = 10
+        list_all_results=[]
+        decision_scores = []
+        print(key)
+        
+        df_feature_importance = pd.DataFrame(columns=["modelo"] + list(X.columns))
+        df_feature_importance_count = pd.DataFrame(columns=["modelo"] + list(X.columns))
+
+
+        for i_loop in range (0,n):
+            print(i_loop)
+            outer_cv = StratifiedKFold(n_splits=10, shuffle=True)
+            for name, model, params in models:
+                inner_cv = StratifiedKFold(n_splits=5, shuffle=True)
+                grid_search = GridSearchCV(model, params, cv=inner_cv,n_jobs=-1)
+            
+                best_params_list = []
+                best_model_list = []
+                accuracy_list = []
+                auc_list = []
+                f1_list = []
+                recall_list = []
+                precision_list = []
+                sens_list = []
+                spec_list = []
+                uar_list = []
+                
+                i_outer_loop = 0
+                for train_index, test_index in outer_cv.split(X, y):
+                    i_outer_loop+=1
+                    X_train, X_val = X.iloc[train_index], X.iloc[test_index]
+                    y_train, y_val = y[train_index], y[test_index]
+            
+                    X_train = scaler.fit_transform(X_train)
+                
+                    # Aplica la misma transformación a los datos de prueba
+                    X_val = scaler.transform(X_val)
+                    
+                    # Ajustar y transformar los datos de entrenamiento
+                    X_train = imputer.fit_transform(X_train)
+                    
+                    # Transformar los datos de prueba utilizando el imputador ya ajustado
+                    X_val = imputer.transform(X_val)
+
+                    grid_search.fit(X_train, y_train)
+            
+                    best_model = grid_search.best_estimator_
+                    best_params = grid_search.best_params_
+            
+                    best_model_list.append(best_model)
+                    best_params_list.append(best_params)
+            
+                    best_model.fit(X_train, y_train)
+                    y_pred = best_model.predict(X_val)
+                    
+                    if (name == "Random Forest") or (name == "XGBoost"):
+                        decision_scores_actual = best_model.predict_proba(X_val)[:,1]
+                    else:
+                        decision_scores_actual = best_model.decision_function(X_val)
+                        
+                    # Feature importance
+                    if (name == "Logistic Regression"):
+                        feature_importance = best_model.coef_[0]
+                        feature_importance_named = dict(zip(X.columns, feature_importance))
+                    elif (name == "Random Forest"):
+                        feature_importance = best_model.feature_importances_
+                        feature_importance_named = dict(zip(X.columns, feature_importance))
+                    elif (name == "SVM"):
+                        # Obtener los vectores de soporte
+                        support_vectors = best_model.support_vectors_
+                        # Puedes analizar los coeficientes para estimar la importancia relativa
+                        coeficients = best_model.coef_[0]
+                        feature_importance_named = dict(zip(X.columns, coeficients))
+                    elif (name == "XGBoost"):
+                        feature_importance = best_model.feature_importances_
+                        feature_importance_named = dict(zip(X.columns, feature_importance))
+                        
+                        
+                    feature_importance_named = abs_values_in_dict(feature_importance_named)
+
+                    
+                    # Find the minimum and maximum values in the list
+                    min_val = min(feature_importance_named.values())
+                    max_val = max(feature_importance_named.values())
+                    
+                    # Apply min-max normalization
+                    normalized_data = [(x - min_val) / (max_val - min_val) for x in feature_importance_named.values()]
+                    df_feature_importance.loc[len(df_feature_importance)] = [name]+list(normalized_data)
+
+                    # Obtener una lista de los valores ordenados de mayor a menor
+                    diccionario_ordenado = sorted(feature_importance_named.values(), reverse=False)
+
+                    # Crear un nuevo diccionario con los valores reemplazados por su posición ordenada
+                    diccionario_ordenado = {k: diccionario_ordenado.index(v) + 1 for k, v in feature_importance_named.items()}
+            
+                    lista_a_agregar = [name]
+                    for column in X.columns:
+                        lista_a_agregar.append(diccionario_ordenado[column])
+                        
+                    df_feature_importance_count.loc[len(df_feature_importance_count)] = lista_a_agregar
+                    
+                    accuracy = accuracy_score(y_val, y_pred)
+                    auc = roc_auc_score(y_val, y_pred)
+                    f1 = f1_score(y_val, y_pred)
+                    recall = recall_score(y_val, y_pred)
+                    precision = precision_score(y_val, y_pred)
+                    
+                    # Calcula sensibilidad, especificidad y UAR
+                    tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+                    sens = tp / (tp + fn)
+                    spec = tn / (tn + fp)
+                    uar = (sens + spec) / 2
+        
+                    accuracy_list.append(accuracy)
+                    auc_list.append(auc)
+                    f1_list.append(f1)
+                    recall_list.append(recall)
+                    precision_list.append(precision)
+                    sens_list.append(sens)
+                    spec_list.append(spec)
+                    uar_list.append(uar)
+                    # kappa = cohen_kappa_score(y_val, y_pred)
+                    # oob = best_model.oob_score_
+                    
+                    inner_result = {
+                        'Iteracion': i_loop,
+                        'Modelo': name,
+                        'Mejores hiperparámetros': best_params,
+                        'Accuracy': accuracy,
+                        'AUC': auc,
+                        'F1': f1,
+                        'Recall': recall,
+                        'Precision': precision,
+                        'Sensibilidad': sens,
+                        'Especificidad': spec,
+                        'UAR': uar
+                        # 'kappa': kappa,
+                        # 'oob': oob
+                    }
+                    list_all_results.append(inner_result)
+                    
+                    # Guardar los decision scores
+                    for i in range(len(decision_scores_actual)):
+                        decision_scores.append({
+                            'Iteracion': i_loop,
+                            'i_outer_loop': i_outer_loop,
+                            'Modelo': name,
+                            'Mejores hiperparámetros': best_params,
+                            'Decision Score': decision_scores_actual[i],
+                            'target': y_val[test_index[i]],
+                            'PatientId': value.iloc[test_index[i]][id_column]  # Assuming 'value' is your DataFrame
+
+                        })
+        
+        df_results_inner = pd.DataFrame(list_all_results)
+        
+        # Guarda el DataFrame en un archivo Excel
+        df_results_inner.to_excel('C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learning/' + key + '_all.xlsx', index=False)
+        df_feature_importance.to_excel('C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learningfeature_importance/' + key + '_all.xlsx', index=False)
+
+        for name, model, params in models:
+            df_feature_importance_modelo = df_feature_importance[df_feature_importance["modelo"] == name]
+
+            # Identificar las columnas numéricas
+            columnas_numericas = df_feature_importance_modelo.select_dtypes(include=['number'])
+            
+            # Calcular el promedio de los valores absolutos de las columnas numéricas
+            esto = columnas_numericas.abs().mean()        
+            
+            grafico_barras_horizontales(df_feature_importance_modelo,title=key + "_" + name + '_all',path="C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learning/feature_importance/" + key + "_" + name + '_promedio')
+
+            df_feature_importance_modelo = df_feature_importance_count[df_feature_importance_count["modelo"] == name]
+
+            # Identificar las columnas numéricas
+            columnas_numericas = df_feature_importance_modelo.select_dtypes(include=['number'])
+            
+            # Calcular el promedio de los valores absolutos de las columnas numéricas
+            esto = columnas_numericas.abs().mean()        
+            
+            grafico_barras_horizontales_count(df_feature_importance_modelo,title=key + "_" + name + '_all',path="C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learning/feature_importance/" + key + "_" + name + '_all')
+
+        df_promedio = df_results_inner.groupby('Modelo').agg(['mean', 'std'])
+        df_promedio.columns = [f'{col}_{stat}' for col, stat in df_promedio.columns]
+        df_promedio = df_promedio.reset_index()
+        
+        df_mejores = pd.DataFrame()
+        # Expandir los diccionarios en columnas separadas
+        df = pd.concat([df_results_inner.drop('Mejores hiperparámetros', axis=1), df_results_inner['Mejores hiperparámetros'].apply(pd.Series)], axis=1)
+        
+        # Agrupar por "Modelo" y calcular el promedio de los valores de cada clave
+        df_mean = df.drop(['Iteracion', 'Accuracy','AUC', 'F1','Recall','Precision', 'Sensibilidad', 'Especificidad', 'UAR'], axis=1).groupby('Modelo').mean().reset_index()
+        
+        # Obtener las columnas (excepto 'Modelo')
+        columnas = df_mean.columns.drop('Modelo')
+        
+        # Crear la nueva columna 'mejores hiperparámetros' sin claves NaN
+        df_mean['mejores hiperparámetros'] = df_mean[columnas].apply(lambda row: {k: v for k, v in row.dropna().items()}, axis=1)
+        
+        # Seleccionar solo las columnas 'Modelo' y 'mejores hiperparámetros'
+        df_resultado = df_mean[['Modelo', 'mejores hiperparámetros']]
+        
+        df_promedio = df_promedio.merge(df_resultado)
+        # Calcula la moda de los hiperparámetros
+        def calculate_mode(hyperparameters):
+            flattened_params = [tuple(sorted(params.items())) for params in hyperparameters]
+            counts = {param: flattened_params.count(param) for param in flattened_params}
+            max_count = max(counts.values())
+            modes = [param for param, count in counts.items() if count == max_count]
+            return ', '.join([str(dict(param)) for param in modes])
+        
+        df_promedio['Moda hiperparámetros'] = df_results_inner.groupby('Modelo')['Mejores hiperparámetros'].apply(calculate_mode).values
+        df_promedio.rename(columns = {'mejores hiperparámetros':'Promedio hiperparámetros'}, inplace = True)
+        
+        # Guardar los scores de decisión en un archivo Excel
+        df_decision_scores = pd.DataFrame(decision_scores)
+        
+        df_promedio.to_excel('C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learning/' + key + '_promedio.xlsx', index=False)
+        df_decision_scores.to_excel('C:/Franco/Doctorado/Laboratorio/17_aphasia_verbal_fluency_ucsf/mayor_a_2/nueva/resultados_machine_learning/' + key + '_decision_scores.xlsx', index=False)
+
+
+
