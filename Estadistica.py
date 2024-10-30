@@ -565,19 +565,19 @@ def two_by_two_ANOVA(data,within,between,subject,path_to_save,correction=True,va
 
     return mixed_anova
 
-def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,palette,correction=True,variables=None):
+def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,palette=None,correction=True,variables=None):
     if variables == None:
         variables = [col for col in data.columns if isinstance(data[col][0],(int,float))]
     
     mixed_anova = {}
     mixed_anova["ANOVA"] = pd.DataFrame(index=variables)
     mixed_anova["posthoc_interaccion"] = None
-    if (len(np.unique(data[between]))>=2):
+    if (between!=None) and(len(np.unique(data[between]))>=2):
         mixed_anova["posthoc_" + between] = None
     if (within!=None) and (len(np.unique(data[within]))>=2):
         mixed_anova["posthoc_" + within] = None
 
-    if within != None:
+    if (between != None) and (within != None):
         if (f'{between}_{within}' not in data.columns) & (f'{within}_{between}' not in data.columns):
             for i, row in data.iterrows():
                 data.loc[i,f'{between}_{within}'] = f'{row[between]}_{row[within]}'
@@ -652,12 +652,19 @@ def two_by_two_ANOVA_dictionary(data,within,between,subject,path_to_save,palette
     
             ax = fig.add_subplot()
     
-            sns.boxplot(x=between,y=variable,data=data,showmeans=True,
-            meanprops={"marker":"o",
-                       "markerfacecolor":"white", 
-                       "markeredgecolor":"black",
-                      "markersize":"10"},
-            palette = palette)
+            if palette == None:
+                sns.boxplot(x=between,y=variable,data=data,showmeans=True,
+                            meanprops={"marker":"o",
+                           "markerfacecolor":"white", 
+                           "markeredgecolor":"black",
+                          "markersize":"10"})
+            else:
+                sns.boxplot(x=between,y=variable,data=data,showmeans=True,
+                            meanprops={"marker":"o",
+                           "markerfacecolor":"white", 
+                           "markeredgecolor":"black",
+                          "markersize":"10"},
+                palette = palette)
             ax.set_xlabel(between)
             ax.set_ylabel(variable)
             plt.xticks(rotation=30)
